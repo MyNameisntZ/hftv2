@@ -11,7 +11,7 @@ if exist ".venv\Scripts\python.exe" (
 
 where py >nul 2>nul
 if not errorlevel 1 (
-  set "BOOTSTRAP_PYTHON=py -3.11"
+  set "BOOTSTRAP_PYTHON=py -3"
 ) else (
   where python >nul 2>nul
   if not errorlevel 1 (
