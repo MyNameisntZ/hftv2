@@ -1,0 +1,2643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Local Trading Platform</title>
+  <style>
+    :root {
+      --bg: #191919;
+      --bg-alt: #202020;
+      --panel: #242424;
+      --panel-alt: #2b2b2b;
+      --border: #363636;
+      --text: #f2f2f2;
+      --muted: #a3a3a3;
+      --accent: #b7ff3c;
+      --accent-soft: rgba(183, 255, 60, 0.12);
+      --good: #9ef01a;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --shadow: 0 18px 46px rgba(0, 0, 0, 0.30);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(183, 255, 60, 0.05), transparent 22%),
+        linear-gradient(180deg, #161616 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: rgba(24, 24, 24, 0.96);
+      padding: 20px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .brand {
+      padding: 12px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(183, 255, 60, 0.03));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .nav-group {
+      margin-top: 18px;
+    }
+
+    .advanced-nav {
+      display: none;
+      margin-top: 8px;
+      padding-left: 8px;
+      border-left: 1px solid var(--border);
+    }
+
+    .advanced-nav.open {
+      display: block;
+    }
+
+    .nav-label {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0 10px 8px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid transparent;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-bottom: 6px;
+      transition: 0.15s ease;
+      font-size: 14px;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: #4a4a4a;
+    }
+
+    .nav-btn.active {
+      background: linear-gradient(180deg, rgba(183, 255, 60, 0.10), rgba(183, 255, 60, 0.04));
+      border-color: rgba(183, 255, 60, 0.42);
+      box-shadow: inset 0 0 0 1px rgba(183, 255, 60, 0.08);
+    }
+
+    .main {
+      padding: 22px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .page-subtitle {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .badge, .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #242424;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .button {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #2a2a2a, #232323);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .button:hover {
+      background: linear-gradient(180deg, #313131, #292929);
+      border-color: rgba(183, 255, 60, 0.35);
+    }
+
+    .button.danger {
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fecaca;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(39, 39, 39, 0.96), rgba(31, 31, 31, 0.98));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    }
+
+    .card h2, .card h3 {
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: #c9c9c9;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+    .span-7 { grid-column: span 7; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+
+    .metric {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .metric-label {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .engine-grid, .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .mini-card {
+      background: linear-gradient(180deg, #2d2d2d, #262626);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    }
+
+    .mini-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .clickable-row {
+      cursor: pointer;
+    }
+
+    .clickable-row:hover {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .clickable-row.active {
+      background: rgba(183, 255, 60, 0.07);
+    }
+
+    .report-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .report-stat {
+      background: linear-gradient(180deg, #2c2c2c, #252525);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .report-stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .report-stat-value {
+      margin-top: 10px;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .report-stat-subvalue {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chip-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .report-section-title {
+      margin: 8px 0 10px;
+      color: #d4d4d4;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .report-note {
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(183, 255, 60, 0.2);
+      background: rgba(183, 255, 60, 0.06);
+      color: #dff7af;
+      font-size: 13px;
+    }
+
+    details.report-raw {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #1c1c1c;
+      overflow: hidden;
+    }
+
+    details.report-raw summary {
+      cursor: pointer;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      list-style: none;
+    }
+
+    details.report-raw summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(183, 255, 60, 0.28);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      color: #bdbdbd;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .mono {
+      font-family: Consolas, Menlo, monospace;
+      font-size: 12px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .field input, .field select, .field textarea {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #212121;
+      color: var(--text);
+      padding: 10px 12px;
+      font: inherit;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: rgba(183, 255, 60, 0.5);
+      box-shadow: 0 0 0 3px rgba(183, 255, 60, 0.10);
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--muted);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.08);
+    }
+
+    .status-dot.good { background: var(--good); }
+    .status-dot.warn { background: var(--warn); }
+    .status-dot.bad { background: var(--bad); }
+
+    .error-banner {
+      display: none;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      background: rgba(127, 29, 29, 0.18);
+      color: #fecaca;
+      font-size: 13px;
+    }
+
+    pre.log-output {
+      margin: 0;
+      background: #1b1b1b;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      color: #d1d5db;
+      min-height: 320px;
+      max-height: 480px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: Consolas, Menlo, monospace;
+      font-size: 12px;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      padding: 18px 0;
+    }
+
+    @media (max-width: 1200px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 980px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar {
+        position: relative;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .span-3, .span-4, .span-5, .span-6, .span-7, .span-8, .span-12 {
+        grid-column: span 12;
+      }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-title">Trading Workstation</div>
+        <div class="brand-subtitle">Local automated platform shell</div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Start Here</div>
+        <button class="nav-btn active" data-view="dashboard">Results</button>
+        <button class="nav-btn" data-view="broker-connections">Bot Setup</button>
+        <button class="nav-btn" data-view="strategies">Strategy Setup</button>
+        <button class="nav-btn" data-view="backtesting">Run &amp; Backtest</button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Advanced Tools</div>
+        <button class="nav-btn" id="advancedNavToggle" type="button">Show Advanced</button>
+        <div id="advancedNav" class="advanced-nav">
+          <button class="nav-btn" data-view="market-scanner">Market Scanner</button>
+          <button class="nav-btn" data-view="watchlists">Watchlists</button>
+          <button class="nav-btn" data-view="paper-trading">Paper Trading</button>
+          <button class="nav-btn" data-view="live-trading">Live Trading</button>
+          <button class="nav-btn" data-view="orders">Orders</button>
+          <button class="nav-btn" data-view="positions">Positions</button>
+          <button class="nav-btn" data-view="analytics">Analytics</button>
+          <button class="nav-btn" data-view="trade-calendar">Trade Calendar</button>
+          <button class="nav-btn" data-view="data-feeds">Data Feed Activity</button>
+          <button class="nav-btn" data-view="risk-controls">Risk Controls</button>
+          <button class="nav-btn" data-view="logs">Logs</button>
+          <button class="nav-btn" data-view="settings">Advanced Settings</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <div id="pageTitle" class="page-title">Results</div>
+          <div id="pageSubtitle" class="page-subtitle">What the bot is doing and how recent tests performed</div>
+        </div>
+        <div class="topbar-actions">
+          <div id="globalStatus" class="badge">Loading...</div>
+          <div id="refreshTime" class="chip">Waiting for data</div>
+          <button id="manualRefresh" class="button">Refresh</button>
+        </div>
+      </div>
+
+      <div id="errorBanner" class="error-banner"></div>
+
+      <section id="view-dashboard" class="view active">
+        <div class="grid">
+          <div class="card span-3">
+            <h2>Bot Status</h2>
+            <div id="metricStatus" class="metric">-</div>
+            <div class="metric-label">Overall runtime status</div>
+          </div>
+          <div class="card span-3">
+            <h2>Enabled Strategies</h2>
+            <div id="metricStrategies" class="metric">-</div>
+            <div class="metric-label">Strategies currently allowed to trade</div>
+          </div>
+          <div class="card span-3">
+            <h2>Open Positions</h2>
+            <div id="metricPositions" class="metric">-</div>
+            <div class="metric-label">Current active symbols</div>
+          </div>
+          <div class="card span-3">
+            <h2>Recent Orders</h2>
+            <div id="metricOrders" class="metric">-</div>
+            <div class="metric-label">Execution records in the system</div>
+          </div>
+
+          <div class="card span-6">
+            <h2>Latest Backtest Results</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Strategy</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboardBacktestsTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card span-6">
+            <h2>Live Trading Results</h2>
+            <div id="resultsSnapshotCards" class="card-grid"></div>
+          </div>
+
+          <div class="card span-6">
+            <h2>Current Positions</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Qty</th>
+                    <th>Avg Price</th>
+                    <th>Unrealized P&amp;L</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboardPositionsTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card span-6">
+            <h2>Recent Orders</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Status</th>
+                    <th>Price</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboardOrdersTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card span-6">
+            <h2>Recent Events</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Source</th>
+                    <th>Symbol</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody id="recentEvents"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card span-6">
+            <h2>Setup Snapshot</h2>
+            <div class="card-grid" id="quickMetricCards"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-market-scanner" class="view">
+        <div class="grid">
+          <div class="card span-5">
+            <h2>Universe Filters</h2>
+            <div class="form-grid">
+              <div class="field">
+                <label for="scannerMinPrice">Min Price</label>
+                <input id="scannerMinPrice" type="number" min="0" step="0.01" value="2" />
+              </div>
+              <div class="field">
+                <label for="scannerMaxPrice">Max Price</label>
+                <input id="scannerMaxPrice" type="number" min="0" step="0.01" value="20" />
+              </div>
+              <div class="field">
+                <label for="scannerMaxFloat">Max Float (Millions)</label>
+                <input id="scannerMaxFloat" type="number" min="0" step="0.1" value="20" />
+              </div>
+              <div class="field">
+                <label for="scannerMinAvgVolume">Min Avg Daily Volume</label>
+                <input id="scannerMinAvgVolume" type="number" min="0" step="1000" value="0" />
+              </div>
+              <div class="field">
+                <label for="scannerMaxMarketCap">Max Market Cap (Millions)</label>
+                <input id="scannerMaxMarketCap" type="number" min="0" step="1" value="1000" />
+              </div>
+              <div class="field">
+                <label for="scannerExcludeHalted">Exclude Halted</label>
+                <select id="scannerExcludeHalted">
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+            </div>
+            <div class="row" style="margin-top:12px;">
+              <button class="button" id="saveScannerPrefs">Apply Universe Filters</button>
+              <span class="muted" id="scannerPrefsStatus">These filters control which tickers are eligible</span>
+            </div>
+          </div>
+          <div class="card span-7">
+            <h2>Active Symbol Universe</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Price</th>
+                    <th>Float M</th>
+                    <th>Avg Vol</th>
+                    <th>Mkt Cap M</th>
+                    <th>Halted</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody id="scannerUniverseTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-watchlists" class="view">
+        <div class="grid">
+          <div class="card span-4">
+            <h2>Watchlist Builder</h2>
+            <div class="stack">
+              <div class="field">
+                <label for="watchlistInput">Add Symbol</label>
+                <input id="watchlistInput" placeholder="AAPL" />
+              </div>
+              <div class="row">
+                <button class="button" id="addWatchlistBtn">Add to Watchlist</button>
+                <button class="button" id="clearWatchlistBtn">Clear</button>
+              </div>
+            </div>
+          </div>
+          <div class="card span-8">
+            <h2>Saved Watchlist</h2>
+            <div id="watchlistContainer" class="card-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-strategies" class="view">
+        <div class="grid">
+          <div class="card span-4">
+            <h2>Strategy Experience</h2>
+            <div class="stack">
+              <div class="field">
+                <label for="strategyExperienceMode">Editor Mode</label>
+                <select id="strategyExperienceMode">
+                  <option value="guided">Guided</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="globalRiskTolerance">Global Risk Tolerance</label>
+                <input id="globalRiskTolerance" type="range" min="0" max="100" value="50" />
+              </div>
+              <div class="row">
+                <span class="pill" id="globalRiskToleranceValue">50</span>
+                <span class="muted" id="globalRiskProfileText">Balanced</span>
+              </div>
+              <div id="riskProfileButtons" class="row"></div>
+              <div class="row">
+                <button class="button" id="saveStrategyWorkspaceBtn">Save Strategy Workspace</button>
+                <span class="muted" id="strategyWorkspaceStatus">Applies defaults across strategies</span>
+              </div>
+            </div>
+          </div>
+          <div class="card span-8">
+            <h2>Strategy Controls</h2>
+            <div id="strategyContainer" class="card-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-backtesting" class="view">
+        <div class="grid">
+          <div class="card span-5">
+            <h2>Simple Backtest Setup</h2>
+            <div class="form-grid">
+              <div class="field">
+                <label for="backtestStrategy">Strategy</label>
+                <select id="backtestStrategy">
+                  <option>VWAP Strategy</option>
+                  <option>RSI Strategy</option>
+                  <option>Bull Flag Breakout</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="backtestDataSource">Data Source</label>
+                <select id="backtestDataSource">
+                  <option>Polygon / Massive</option>
+                  <option>Local Historical Cache</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="backtestMode">Backtest Style</label>
+                <select id="backtestMode">
+                  <option>Simple Replay</option>
+                  <option>Batch Compare</option>
+                  <option>Walk Forward</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="backtestAnchorDaysOld">Start On Data That's This Many Days Old</label>
+                <input id="backtestAnchorDaysOld" type="number" min="1" max="365" value="4" />
+              </div>
+              <div class="field">
+                <label for="backtestSimulationDays">Simulate Forward For Days</label>
+                <input id="backtestSimulationDays" type="number" min="1" max="365" value="30" />
+              </div>
+              <div class="field">
+                <label for="backtestStartingCapital">Starting Capital</label>
+                <input id="backtestStartingCapital" type="number" min="100" step="100" value="5000" />
+              </div>
+              <div class="field">
+                <label for="backtestSettlementDays">Cash Settlement Days</label>
+                <input id="backtestSettlementDays" type="number" min="0" max="5" value="1" />
+              </div>
+              <div class="field">
+                <label for="backtestAccountType">Account Type</label>
+                <select id="backtestAccountType">
+                  <option>Cash Account</option>
+                  <option>Margin Account</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="backtestReplaySpeed">Replay Speed</label>
+                <select id="backtestReplaySpeed">
+                  <option>Instant</option>
+                  <option>10x</option>
+                  <option>50x</option>
+                  <option>Real Time</option>
+                </select>
+              </div>
+            </div>
+            <div class="row" style="margin-top:12px;">
+              <button class="button" id="saveBacktestPrefs">Save Backtest Preset</button>
+              <button class="button" id="runBacktestBtn">Run Backtest</button>
+              <span class="muted" id="backtestPresetStatus">Use this as your simple backtest template</span>
+            </div>
+          </div>
+          <div class="card span-7">
+            <h2>Backtest Runs</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Strategy</th>
+                    <th>Status</th>
+                    <th>Parameters</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody id="backtestRunsTable"></tbody>
+              </table>
+            </div>
+            <div class="stack" style="margin-top:14px;">
+              <div class="mini-card">
+                <div class="mini-title">Latest Backtest Summary</div>
+                <div id="backtestSummaryStatus" class="muted">No backtest run from this screen yet.</div>
+              </div>
+              <div id="backtestSummaryReport" class="stack">
+                <div id="backtestSummaryCards" class="report-grid"></div>
+                <div class="mini-card">
+                  <div class="report-section-title">Best Setup</div>
+                  <div id="backtestSuggestion" class="report-note">No backtest run results yet.</div>
+                </div>
+                <div class="mini-card">
+                  <div class="report-section-title">Universe Traded</div>
+                  <div id="backtestUniverseSymbols" class="chip-wrap"></div>
+                </div>
+                <div class="mini-card">
+                  <div class="report-section-title">Top Tested Variants</div>
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Stop</th>
+                          <th>Target</th>
+                          <th>Profit</th>
+                          <th>Ending Equity</th>
+                          <th>Trades</th>
+                          <th>Win Rate</th>
+                          <th>Drawdown</th>
+                          <th>Profit Factor</th>
+                        </tr>
+                      </thead>
+                      <tbody id="backtestVariantTable"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <details class="report-raw">
+                  <summary>Raw Backtest JSON</summary>
+                  <pre id="backtestSummaryOutput" class="log-output" style="min-height:160px; max-height:240px;">No run results yet.</pre>
+                </details>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid" style="margin-top:16px;">
+          <div class="card span-6">
+            <h2>Backtest Universe Filters</h2>
+            <div class="muted" style="margin-bottom:12px;">Use these to decide which stocks the backtest is allowed to trade. This is the same reusable stock-universe filter used by the scanner.</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="backtestUniverseMinPrice">Min Price</label>
+                <input id="backtestUniverseMinPrice" type="number" min="0" step="0.1" />
+              </div>
+              <div class="field">
+                <label for="backtestUniverseMaxPrice">Max Price</label>
+                <input id="backtestUniverseMaxPrice" type="number" min="0" step="0.1" />
+              </div>
+              <div class="field">
+                <label for="backtestUniverseMaxFloat">Max Float (Millions)</label>
+                <input id="backtestUniverseMaxFloat" type="number" min="0" step="0.1" />
+              </div>
+              <div class="field">
+                <label for="backtestUniverseMinAvgVolume">Min Avg Volume</label>
+                <input id="backtestUniverseMinAvgVolume" type="number" min="0" step="10000" />
+              </div>
+              <div class="field">
+                <label for="backtestUniverseMaxMarketCap">Max Market Cap (Millions)</label>
+                <input id="backtestUniverseMaxMarketCap" type="number" min="0" step="1" />
+              </div>
+              <div class="field">
+                <label for="backtestUniverseExcludeHalted">Exclude Halted</label>
+                <select id="backtestUniverseExcludeHalted">
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="card span-6">
+            <h2>Selected Strategy Inputs</h2>
+            <div class="muted" style="margin-bottom:12px;">This backtest uses the currently saved settings for the strategy you choose above. Edit them here if you want to change Bull Flag breakout criteria before you run.</div>
+            <div id="backtestStrategyParameterEditor" class="stack">
+              <div class="empty-state">Choose a strategy to load editable parameters.</div>
+            </div>
+            <div class="row" style="margin-top:12px;">
+              <button class="button" id="saveBacktestCriteriaBtn">Save Universe + Strategy Inputs</button>
+              <span class="muted" id="backtestCriteriaStatus">Backtests use the saved universe filters and selected strategy parameters.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-paper-trading" class="view">
+        <div class="grid">
+          <div class="card span-4">
+            <h2>Simulation Controls</h2>
+            <div class="field">
+              <label for="paperMode">Environment</label>
+              <select id="paperMode">
+                <option>Historical Backtest</option>
+                <option selected>Live Market Simulation</option>
+                <option>Broker Paper Trading</option>
+              </select>
+            </div>
+            <div class="row" style="margin-top:12px;">
+              <button class="button" id="saveEnvironmentBtn">Save Environment</button>
+              <span class="muted" id="environmentStatus">Local UI selection</span>
+            </div>
+          </div>
+          <div class="card span-8">
+            <h2>Paper Trading Snapshot</h2>
+            <div id="paperTradingSummary" class="card-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-live-trading" class="view">
+        <div class="grid">
+          <div class="card span-6">
+            <h2>Live Trading Readiness</h2>
+            <div id="liveTradingReadiness" class="stack"></div>
+          </div>
+          <div class="card span-6">
+            <h2>Broker Route</h2>
+            <div class="stack">
+              <div class="mini-card">
+                <div class="mini-title">Alpaca</div>
+                <div class="muted">Adapter placeholder wired for future execution integration.</div>
+              </div>
+              <div class="mini-card">
+                <div class="mini-title">Webull</div>
+                <div class="muted">Adapter placeholder wired for future execution integration.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-orders" class="view">
+        <div class="card">
+          <h2>Orders</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Broker ID</th>
+                  <th>Symbol</th>
+                  <th>Side</th>
+                  <th>Qty</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Price</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-positions" class="view">
+        <div class="card">
+          <h2>Positions</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Quantity</th>
+                  <th>Avg Price</th>
+                  <th>Unrealized P&amp;L</th>
+                  <th>Realized P&amp;L</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody id="positionsTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-analytics" class="view">
+        <div class="grid">
+          <div class="card span-4">
+            <h2>Performance Summary</h2>
+            <div id="analyticsSummary" class="stack"></div>
+          </div>
+          <div class="card span-8">
+            <h2>Trade Intents</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Strategy</th>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Entry</th>
+                    <th>Confidence</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody id="intentsTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-trade-calendar" class="view">
+        <div class="card">
+          <h2>Trade Calendar</h2>
+          <div id="tradeCalendar" class="card-grid"></div>
+        </div>
+      </section>
+
+      <section id="view-data-feeds" class="view">
+        <div class="grid">
+          <div class="card span-6">
+            <h2>Data Feed Status</h2>
+            <div id="dataFeedStatus" class="stack"></div>
+          </div>
+          <div class="card span-6">
+            <h2>What This Page Is For</h2>
+            <div class="stack">
+              <div class="mini-card">This is the advanced feed activity page.</div>
+              <div class="mini-card">If you just want to add API keys and choose whether to use live or simulated data, go to <strong>Setup &amp; APIs</strong>.</div>
+              <div class="mini-card">Historical replay stays available for backtesting even when live simulation is turned off.</div>
+            </div>
+          </div>
+          <div class="card span-12">
+            <h2>Recent Market Events</h2>
+            <div id="dataFeedEvents" class="stack"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-broker-connections" class="view">
+        <div class="grid">
+          <div class="card span-4">
+            <h2>Simple Setup</h2>
+            <div id="brokerConnections" class="card-grid"></div>
+          </div>
+          <div class="card span-4">
+            <h2>Data Mode</h2>
+            <div class="stack">
+              <div class="toggle-row">
+                <div>
+                  <div class="mini-title">Use Simulated Live Data</div>
+                  <div class="muted">Only use this for demo flow or paper smoke tests.</div>
+                </div>
+                <input id="simulatedLiveDataToggle" type="checkbox" />
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="mini-title">Use External Market Data APIs</div>
+                  <div class="muted">Turn this on when you have saved a Polygon/Massive key.</div>
+                </div>
+                <input id="externalMarketDataToggle" type="checkbox" />
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="mini-title">Allow Historical Replay</div>
+                  <div class="muted">Keep this on for backtesting and replay mode.</div>
+                </div>
+                <input id="historicalReplayToggle" type="checkbox" />
+              </div>
+              <div class="row">
+                <button class="button" id="saveRuntimeOperationsBtn">Save Data Mode</button>
+                <span class="muted" id="runtimeOperationsStatus">Live and replay behavior</span>
+              </div>
+            </div>
+          </div>
+          <div class="card span-4">
+            <h2>API Connections</h2>
+            <div class="form-grid">
+              <div class="field">
+                <label for="polygonApiKey">Polygon API Key</label>
+                <input id="polygonApiKey" type="password" placeholder="Enter Polygon API key" />
+              </div>
+              <div class="field">
+                <label for="alpacaApiKey">Alpaca API Key</label>
+                <input id="alpacaApiKey" type="password" placeholder="Enter Alpaca API key" />
+              </div>
+              <div class="field">
+                <label for="alpacaSecretKey">Alpaca Secret Key</label>
+                <input id="alpacaSecretKey" type="password" placeholder="Enter Alpaca secret key" />
+              </div>
+              <div class="field">
+                <label for="alpacaBaseUrl">Alpaca Base URL</label>
+                <input id="alpacaBaseUrl" placeholder="https://paper-api.alpaca.markets" />
+              </div>
+              <div class="field">
+                <label for="webullUsername">Webull Username</label>
+                <input id="webullUsername" placeholder="Enter Webull username" />
+              </div>
+              <div class="field">
+                <label for="webullPassword">Webull Password</label>
+                <input id="webullPassword" type="password" placeholder="Enter Webull password" />
+              </div>
+            </div>
+            <div class="stack" style="margin-top:14px;">
+              <div class="toggle-row">
+                <div>
+                  <div class="mini-title">Enable Polygon Feed</div>
+                  <div class="muted">Use Polygon/Massive as the live market data provider.</div>
+                </div>
+                <input id="polygonEnabledToggle" type="checkbox" />
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="mini-title">Enable Alpaca Routing</div>
+                  <div class="muted">Use Alpaca paper/live routing when the execution adapter is completed.</div>
+                </div>
+                <input id="alpacaEnabledToggle" type="checkbox" />
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="mini-title">Enable Webull Routing</div>
+                  <div class="muted">Use Webull credentials for future local execution support.</div>
+                </div>
+                <input id="webullEnabledToggle" type="checkbox" />
+              </div>
+            </div>
+            <div class="row" style="margin-top:14px;">
+              <button class="button" id="saveApiConnectionsBtn">Save API Settings</button>
+              <button class="button" id="testPolygonBtn">Test Polygon</button>
+              <button class="button" id="testAlpacaBtn">Test Alpaca</button>
+              <span class="muted" id="apiSettingsStatus">Stored locally on this workstation</span>
+            </div>
+            <div class="stack" style="margin-top:14px;">
+              <div class="mini-card">
+                <div class="mini-title">API Test Result</div>
+                <div id="apiTestStatus" class="muted">No test run yet.</div>
+              </div>
+              <pre id="apiTestOutput" class="log-output" style="min-height:180px; max-height:260px;">No provider data loaded yet.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-risk-controls" class="view">
+        <div class="grid">
+          <div class="card span-6">
+            <h2>Risk Limits</h2>
+            <div id="riskLimitSummary" class="stack"></div>
+          </div>
+          <div class="card span-6">
+            <h2>Risk Profile</h2>
+            <div class="stack">
+              <div class="field">
+                <label for="riskToleranceSlider">Risk Tolerance Slider</label>
+                <input id="riskToleranceSlider" type="range" min="0" max="100" value="50" />
+              </div>
+              <div class="row">
+                <span class="pill" id="riskToleranceValue">50</span>
+                <span class="muted" id="selectedRiskProfile">Balanced</span>
+              </div>
+              <div class="muted">Lower values tighten risk limits and confidence thresholds. Higher values increase sizing and signal frequency.</div>
+              <div class="row" id="riskProfileQuickPick"></div>
+              <button class="button" id="saveRiskProfileBtn">Apply Risk Profile</button>
+            </div>
+          </div>
+          <div class="card span-12">
+            <h2>Operator Controls</h2>
+            <div class="stack">
+              <div class="toggle-row">
+                <div>
+                  <div class="mini-title">Kill Switch</div>
+                  <div class="muted">Blocks new entries in the UI shell.</div>
+                </div>
+                <input id="killSwitchToggle" type="checkbox" />
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="mini-title">Require Confirmation</div>
+                  <div class="muted">Adds an extra confirmation step for live actions.</div>
+                </div>
+                <input id="confirmToggle" type="checkbox" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-logs" class="view">
+        <div class="card">
+          <h2>Platform Logs</h2>
+          <pre id="logOutput" class="log-output">Loading logs...</pre>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view">
+        <div class="grid">
+          <div class="card span-6">
+            <h2>Advanced Runtime Configuration</h2>
+            <div id="runtimeConfigTable" class="stack"></div>
+          </div>
+          <div class="card span-6">
+            <h2>Advanced Workspace Preferences</h2>
+            <div class="form-grid">
+              <div class="field">
+                <label for="defaultView">Default Start View</label>
+                <select id="defaultView">
+                  <option value="dashboard">Dashboard</option>
+                  <option value="market-scanner">Market Scanner</option>
+                  <option value="orders">Orders</option>
+                  <option value="positions">Positions</option>
+                  <option value="analytics">Analytics</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="refreshInterval">Refresh Interval</label>
+                <select id="refreshInterval">
+                  <option value="3000">3 seconds</option>
+                  <option value="5000">5 seconds</option>
+                  <option value="10000">10 seconds</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="preferredBroker">Preferred Broker</label>
+                <select id="preferredBroker">
+                  <option>Paper</option>
+                  <option>Alpaca</option>
+                  <option>Webull</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="preferredEnvironment">Preferred Environment</label>
+                <select id="preferredEnvironment">
+                  <option>Live Market Simulation</option>
+                  <option>Historical Backtest</option>
+                  <option>Broker Paper Trading</option>
+                </select>
+              </div>
+            </div>
+            <div class="row" style="margin-top:12px;">
+              <button class="button" id="saveSettingsBtn">Save Preferences</button>
+              <span class="muted" id="settingsSavedText">Saved locally in browser</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEYS = {
+      watchlist: "tradingPlatform.watchlist",
+      settings: "tradingPlatform.settings",
+      scanner: "tradingPlatform.scanner",
+      risk: "tradingPlatform.risk",
+      backtest: "tradingPlatform.backtest"
+    };
+
+    const VIEW_META = {
+      dashboard: ["Results", "What the bot is doing and how recent tests performed"],
+      "market-scanner": ["Market Scanner", "Advanced tradable-universe tools"],
+      watchlists: ["Watchlists", "Maintain a local manual symbol list"],
+      strategies: ["Strategy Setup", "Choose strategies and tune how the bot makes decisions"],
+      backtesting: ["Run & Backtest", "Choose your data window, account type, and replay setup"],
+      "paper-trading": ["Paper Trading", "Simulation environment and paper execution snapshot"],
+      "live-trading": ["Live Trading", "Broker readiness and live route status"],
+      orders: ["Orders", "Recent execution records"],
+      positions: ["Positions", "Current paper position ledger"],
+      analytics: ["Analytics", "Performance summary and trade intent feed"],
+      "trade-calendar": ["Trade Calendar", "Session summary placeholders for daily review"],
+      "data-feeds": ["Data Feed Activity", "Advanced market-data activity and diagnostics"],
+      "broker-connections": ["Bot Setup", "Add broker keys, add Polygon/Massive, and choose live vs replay data"],
+      "risk-controls": ["Risk Controls", "Advanced risk limits and operator guards"],
+      logs: ["Logs", "Tail of the platform log file"],
+      settings: ["Advanced Settings", "Less frequently used runtime and workspace options"]
+    };
+
+    let refreshHandle = null;
+    let currentView = "dashboard";
+    let lastData = {};
+    let apiFormDirty = false;
+    let backtestFormDirty = false;
+    let backtestCriteriaDirty = false;
+    let scannerFormDirty = false;
+    let latestApiTestResult = null;
+    let latestBacktestRun = null;
+    let backtestCriteriaStrategyId = null;
+    let currentRuntimeInstanceId = null;
+
+    function loadStore(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function saveStore(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`${url} returned ${response.status}: ${text.slice(0, 120)}`);
+      }
+      return response.json();
+    }
+
+    function formatTime(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+    }
+
+    function formatCurrency(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return "-";
+      return numeric.toLocaleString(undefined, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 2
+      });
+    }
+
+    function formatPercent(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return "-";
+      return `${numeric.toFixed(2)}%`;
+    }
+
+    function formatCount(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return "-";
+      return numeric.toLocaleString();
+    }
+
+    function buildReportStat(label, value, subvalue = "") {
+      return `
+        <div class="report-stat">
+          <div class="report-stat-label">${label}</div>
+          <div class="report-stat-value">${value}</div>
+          <div class="report-stat-subvalue">${subvalue}</div>
+        </div>
+      `;
+    }
+
+    function renderBacktestReport(run) {
+      const cards = document.getElementById("backtestSummaryCards");
+      const suggestion = document.getElementById("backtestSuggestion");
+      const symbols = document.getElementById("backtestUniverseSymbols");
+      const variantTable = document.getElementById("backtestVariantTable");
+      const rawOutput = document.getElementById("backtestSummaryOutput");
+
+      if (!run || !run.result_summary) {
+        cards.innerHTML = "";
+        suggestion.textContent = "No backtest run results yet.";
+        symbols.innerHTML = '<span class="muted">No symbols yet.</span>';
+        variantTable.innerHTML = '<tr><td colspan="8" class="muted">No variants tested yet.</td></tr>';
+        rawOutput.textContent = "No run results yet.";
+        return;
+      }
+
+      const summary = run.result_summary;
+      const best = summary.best_variant || {};
+      const variantRows = summary.all_variants || [];
+
+      cards.innerHTML = [
+        buildReportStat("Net Profit", formatCurrency(best.net_profit), `${summary.strategy_name || run.strategy_id}`),
+        buildReportStat("Ending Equity", formatCurrency(best.ending_equity), `${summary.simulation_days || 0} simulated day(s)`),
+        buildReportStat("Trades Taken", formatCount(best.total_trades), `${formatCount(summary.variants_tested || 0)} variant(s) tested`),
+        buildReportStat("Win Rate", formatPercent(best.win_rate), `${summary.account_type || "-"}`),
+        buildReportStat("Max Drawdown", formatPercent(best.max_drawdown), `${summary.replay_speed || "-"} replay`),
+        buildReportStat("Profit Factor", Number.isFinite(Number(best.profit_factor)) ? String(best.profit_factor) : "-", `${summary.data_source || "-"}`)
+      ].join("");
+
+      suggestion.textContent = summary.suggestion || "No optimization suggestion available yet.";
+
+      const universeSymbols = summary.universe_symbols || [];
+      symbols.innerHTML = universeSymbols.length
+        ? universeSymbols.map((symbol) => `<span class="pill">${symbol}</span>`).join("")
+        : '<span class="muted">No symbols matched this run.</span>';
+
+      variantTable.innerHTML = variantRows.length
+        ? variantRows.map((variant) => `
+            <tr>
+              <td>${variant.parameters?.stop_loss_pct ?? "-" }%</td>
+              <td>${variant.parameters?.take_profit_pct ?? "-" }%</td>
+              <td class="${Number(variant.net_profit) >= 0 ? "good" : "bad"}">${formatCurrency(variant.net_profit)}</td>
+              <td>${formatCurrency(variant.ending_equity)}</td>
+              <td>${formatCount(variant.total_trades)}</td>
+              <td>${formatPercent(variant.win_rate)}</td>
+              <td>${formatPercent(variant.max_drawdown)}</td>
+              <td>${variant.profit_factor ?? "-"}</td>
+            </tr>
+          `).join("")
+        : '<tr><td colspan="8" class="muted">No variants tested yet.</td></tr>';
+
+      rawOutput.textContent = JSON.stringify(summary, null, 2);
+    }
+
+    function setError(message) {
+      const banner = document.getElementById("errorBanner");
+      if (!message) {
+        banner.style.display = "none";
+        banner.textContent = "";
+        return;
+      }
+      banner.style.display = "block";
+      banner.textContent = message;
+    }
+
+    function setView(viewName) {
+      currentView = viewName;
+      document.querySelectorAll(".nav-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.view === viewName);
+      });
+      document.querySelectorAll(".view").forEach((view) => {
+        view.classList.toggle("active", view.id === `view-${viewName}`);
+      });
+      const [title, subtitle] = VIEW_META[viewName];
+      document.getElementById("pageTitle").textContent = title;
+      document.getElementById("pageSubtitle").textContent = subtitle;
+      const settings = loadStore(STORAGE_KEYS.settings, {});
+      settings.defaultView = viewName;
+      saveStore(STORAGE_KEYS.settings, settings);
+    }
+
+    function setAdvancedNavOpen(isOpen) {
+      const advancedNav = document.getElementById("advancedNav");
+      const advancedToggle = document.getElementById("advancedNavToggle");
+      advancedNav.classList.toggle("open", isOpen);
+      advancedToggle.textContent = isOpen ? "Hide Advanced" : "Show Advanced";
+    }
+
+    function renderList(containerId, rows) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      if (!rows.length) {
+        container.innerHTML = `<div class="empty-state">No data available yet.</div>`;
+        return;
+      }
+      rows.forEach((row) => container.appendChild(row));
+    }
+
+    function buildMiniMetric(title, value, detail) {
+      const div = document.createElement("div");
+      div.className = "mini-card";
+      div.innerHTML = `<div class="mini-title">${title}</div><div class="metric">${value}</div><div class="muted">${detail}</div>`;
+      return div;
+    }
+
+    function classifyRiskProfile(value) {
+      if (value <= 33) return "Conservative";
+      if (value >= 67) return "Aggressive";
+      return "Balanced";
+    }
+
+    function buildParameterInput(strategyId, parameter, value, disabled) {
+      const safeValue = value ?? "";
+      const disabledAttr = disabled ? "disabled" : "";
+      const common = `data-strategy-id="${strategyId}" data-parameter-key="${parameter.key}" class="strategy-parameter-input" ${disabledAttr}`;
+      if (parameter.type === "select" && Array.isArray(parameter.options)) {
+        const options = parameter.options.map((option) => {
+          const selected = option === safeValue ? "selected" : "";
+          return `<option value="${option}" ${selected}>${option}</option>`;
+        }).join("");
+        return `<select ${common}>${options}</select>`;
+      }
+      const min = parameter.min ?? "";
+      const max = parameter.max ?? "";
+      const step = parameter.step ?? "1";
+      return `<input ${common} type="${parameter.type === "integer" ? "number" : parameter.type}" min="${min}" max="${max}" step="${step}" value="${safeValue}" />`;
+    }
+
+    function buildBacktestParameterInput(parameter, value) {
+      const safeValue = value ?? "";
+      if (parameter.type === "select" && Array.isArray(parameter.options)) {
+        const options = parameter.options.map((option) => {
+          const selected = option === safeValue ? "selected" : "";
+          return `<option value="${option}" ${selected}>${option}</option>`;
+        }).join("");
+        return `<select class="backtest-parameter-input" data-parameter-key="${parameter.key}">${options}</select>`;
+      }
+      const min = parameter.min ?? "";
+      const max = parameter.max ?? "";
+      const step = parameter.step ?? "1";
+      return `<input class="backtest-parameter-input" data-parameter-key="${parameter.key}" type="${parameter.type === "integer" ? "number" : parameter.type}" min="${min}" max="${max}" step="${step}" value="${safeValue}" />`;
+    }
+
+    function getSelectedBacktestStrategy(data = lastData) {
+      const selectedName = document.getElementById("backtestStrategy").value;
+      return ((data.strategyControl && data.strategyControl.strategies) || []).find(
+        (item) => item.name === selectedName
+      ) || null;
+    }
+
+    function markBacktestCriteriaDirty(message = "Unsaved backtest criteria changes") {
+      backtestCriteriaDirty = true;
+      document.getElementById("backtestCriteriaStatus").textContent = message;
+    }
+
+    function renderBacktestCriteriaEditor(data) {
+      const container = document.getElementById("backtestStrategyParameterEditor");
+      const strategy = getSelectedBacktestStrategy(data);
+      const scannerSettings = (data.scanner && data.scanner.settings) || {};
+      const strategyChanged = !strategy || backtestCriteriaStrategyId !== strategy.strategy_id;
+      const needsHydration = !backtestCriteriaDirty || strategyChanged || !container.children.length;
+
+      if (!needsHydration) {
+        return;
+      }
+
+      document.getElementById("backtestUniverseMinPrice").value = scannerSettings.min_price ?? 2;
+      document.getElementById("backtestUniverseMaxPrice").value = scannerSettings.max_price ?? 20;
+      document.getElementById("backtestUniverseMaxFloat").value = scannerSettings.max_float_millions ?? 20;
+      document.getElementById("backtestUniverseMinAvgVolume").value = scannerSettings.min_avg_volume ?? 0;
+      document.getElementById("backtestUniverseMaxMarketCap").value = scannerSettings.max_market_cap_millions ?? 1000;
+      document.getElementById("backtestUniverseExcludeHalted").value = String(scannerSettings.exclude_halted ?? true);
+
+      if (!strategy) {
+        container.innerHTML = `<div class="empty-state">Selected strategy is not available in the control center.</div>`;
+        backtestCriteriaStrategyId = null;
+        document.getElementById("backtestCriteriaStatus").textContent = "No strategy config loaded.";
+        return;
+      }
+
+      const parameterRows = strategy.parameter_schema.map((parameter) => `
+        <div class="field">
+          <label>${parameter.label}</label>
+          ${buildBacktestParameterInput(parameter, strategy.configuration.parameters_json[parameter.key])}
+          <div class="muted mono">${parameter.description || ""}</div>
+        </div>
+      `).join("");
+
+      container.innerHTML = `
+        <div class="mini-card">
+          <div class="mini-title">${strategy.name}</div>
+          <div class="muted">${strategy.description}</div>
+        </div>
+        <div class="form-grid">
+          ${parameterRows}
+        </div>
+      `;
+
+      container.querySelectorAll(".backtest-parameter-input").forEach((input) => {
+        const eventName = input.tagName === "SELECT" ? "change" : "input";
+        input.addEventListener(eventName, () => markBacktestCriteriaDirty());
+      });
+
+      backtestCriteriaStrategyId = strategy.strategy_id;
+      backtestCriteriaDirty = false;
+      document.getElementById("backtestCriteriaStatus").textContent = `Loaded ${strategy.name} parameters for backtesting`;
+    }
+
+    function renderDashboard(data) {
+      const overview = data.overview;
+      const runtime = data.runtime;
+      const events = data.events.events || [];
+      const strategies = (data.strategyControl && data.strategyControl.strategies) || [];
+      const enabledStrategies = strategies.filter((strategy) => strategy.configuration && strategy.configuration.enabled);
+      const orders = (data.orders && data.orders.orders) || [];
+      const positions = (data.positions && data.positions.positions) || [];
+      const backtests = (data.backtests && data.backtests.runs) || [];
+
+      document.getElementById("metricStatus").textContent = overview.status.toUpperCase();
+      document.getElementById("metricStrategies").textContent = enabledStrategies.length;
+      document.getElementById("metricPositions").textContent = positions.length;
+      document.getElementById("metricOrders").textContent = orders.length;
+      document.getElementById("globalStatus").textContent = `Platform ${overview.status.toUpperCase()}`;
+      document.getElementById("refreshTime").textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
+      const quickMetricCards = document.getElementById("quickMetricCards");
+      quickMetricCards.innerHTML = "";
+      quickMetricCards.appendChild(buildMiniMetric("Data Source", runtime.connection_status && runtime.connection_status.polygon && runtime.connection_status.polygon.enabled ? "Live API" : "Local / Sim", "Current market-data mode"));
+      quickMetricCards.appendChild(buildMiniMetric("Replay", runtime.runtime_operations && runtime.runtime_operations.historical_replay_enabled ? "On" : "Off", "Historical replay availability"));
+      quickMetricCards.appendChild(buildMiniMetric("Broker", loadStore(STORAGE_KEYS.settings, {}).preferredBroker || "Paper", "Selected execution route"));
+      quickMetricCards.appendChild(buildMiniMetric("Environment", loadStore(STORAGE_KEYS.settings, {}).preferredEnvironment || "Live Market Simulation", "Selected run environment"));
+
+      const resultsSnapshotCards = document.getElementById("resultsSnapshotCards");
+      resultsSnapshotCards.innerHTML = "";
+      const totalUnrealized = positions.reduce((sum, position) => sum + Number(position.unrealized_pnl || 0), 0);
+      const totalRealized = positions.reduce((sum, position) => sum + Number(position.realized_pnl || 0), 0);
+      resultsSnapshotCards.appendChild(buildMiniMetric("Unrealized P&L", totalUnrealized.toFixed(2), "Across open positions"));
+      resultsSnapshotCards.appendChild(buildMiniMetric("Realized P&L", totalRealized.toFixed(2), "Captured in the current ledger"));
+      resultsSnapshotCards.appendChild(buildMiniMetric("Recent Backtests", backtests.length, "Stored simulation runs"));
+      resultsSnapshotCards.appendChild(buildMiniMetric("Trade Intents", overview.database.trade_intents, "Signals created by active strategies"));
+
+      const dashboardBacktestsTable = document.getElementById("dashboardBacktestsTable");
+      dashboardBacktestsTable.innerHTML = "";
+      backtests.slice(0, 5).forEach((run) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${run.name}</td><td>${run.strategy_id}</td><td>${run.status}</td><td class="mono">${formatTime(run.created_at)}</td>`;
+        dashboardBacktestsTable.appendChild(row);
+      });
+
+      const dashboardPositionsTable = document.getElementById("dashboardPositionsTable");
+      dashboardPositionsTable.innerHTML = "";
+      positions.slice(0, 6).forEach((position) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${position.symbol}</td><td>${position.quantity}</td><td>${position.average_price}</td><td>${position.unrealized_pnl}</td>`;
+        dashboardPositionsTable.appendChild(row);
+      });
+
+      const dashboardOrdersTable = document.getElementById("dashboardOrdersTable");
+      dashboardOrdersTable.innerHTML = "";
+      orders.slice(0, 6).forEach((order) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${order.symbol}</td><td>${order.side}</td><td>${order.status}</td><td>${order.price ?? "-"}</td>`;
+        dashboardOrdersTable.appendChild(row);
+      });
+
+      const recentEvents = document.getElementById("recentEvents");
+      recentEvents.innerHTML = "";
+      events.forEach((event) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${event.event_type}</td><td>${event.source}</td><td>${event.symbol || "-"}</td><td class="mono">${formatTime(event.created_at)}</td>`;
+        recentEvents.appendChild(row);
+      });
+    }
+
+    function renderScanner(data) {
+      if (!scannerFormDirty) {
+        const settings = (data.scanner && data.scanner.settings) || {
+          min_price: 2,
+          max_price: 20,
+          max_float_millions: 20,
+          min_avg_volume: 0,
+          max_market_cap_millions: 1000,
+          exclude_halted: true
+        };
+        document.getElementById("scannerMinPrice").value = settings.min_price;
+        document.getElementById("scannerMaxPrice").value = settings.max_price;
+        document.getElementById("scannerMaxFloat").value = settings.max_float_millions;
+        document.getElementById("scannerMinAvgVolume").value = settings.min_avg_volume;
+        document.getElementById("scannerMaxMarketCap").value = settings.max_market_cap_millions;
+        document.getElementById("scannerExcludeHalted").value = String(settings.exclude_halted);
+      }
+
+      const tbody = document.getElementById("scannerUniverseTable");
+      tbody.innerHTML = "";
+      if (!(data.scanner.symbols || []).length) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="7" class="muted">No symbols currently match the active universe filters.</td>`;
+        tbody.appendChild(row);
+        return;
+      }
+      (data.scanner.symbols || []).forEach((item) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${item.symbol || "-"}</td><td>${item.price ?? "-"}</td><td>${item.float_millions ?? "-"}</td><td>${item.avg_volume ?? "-"}</td><td>${item.market_cap_millions ?? "-"}</td><td>${item.is_halted ? "Yes" : "No"}</td><td class="mono">${formatTime(item.created_at)}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderWatchlist() {
+      const symbols = loadStore(STORAGE_KEYS.watchlist, []);
+      const container = document.getElementById("watchlistContainer");
+      container.innerHTML = "";
+      if (!symbols.length) {
+        container.innerHTML = `<div class="empty-state">No watchlist symbols yet.</div>`;
+        return;
+      }
+      symbols.forEach((symbol) => {
+        const card = document.createElement("div");
+        card.className = "mini-card";
+        card.innerHTML = `
+          <div class="mini-title">${symbol}</div>
+          <div class="row">
+            <button class="button danger" onclick="removeWatchlistSymbol('${symbol}')">Remove</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderStrategies(data) {
+      const controlCenter = data.strategyControl || { strategies: [], workspace_preferences: {}, risk_profiles: [] };
+      const workspace = controlCenter.workspace_preferences || {};
+      const strategies = controlCenter.strategies || [];
+      const container = document.getElementById("strategyContainer");
+      container.innerHTML = "";
+      document.getElementById("strategyExperienceMode").value = workspace.experience_mode || "guided";
+      document.getElementById("globalRiskTolerance").value = workspace.risk_tolerance ?? 50;
+      document.getElementById("globalRiskToleranceValue").textContent = workspace.risk_tolerance ?? 50;
+      document.getElementById("globalRiskProfileText").textContent = classifyRiskProfile(workspace.risk_tolerance ?? 50);
+
+      const profileButtons = document.getElementById("riskProfileButtons");
+      profileButtons.innerHTML = "";
+      (controlCenter.risk_profiles || []).forEach((profile) => {
+        const btn = document.createElement("button");
+        btn.className = "button";
+        btn.textContent = profile.name;
+        btn.addEventListener("click", () => {
+          document.getElementById("globalRiskTolerance").value = profile.risk_tolerance;
+          document.getElementById("globalRiskToleranceValue").textContent = profile.risk_tolerance;
+          document.getElementById("globalRiskProfileText").textContent = profile.name;
+        });
+        profileButtons.appendChild(btn);
+      });
+
+      strategies.forEach((strategy, index) => {
+        const config = strategy.configuration;
+        const guidedMode = (workspace.experience_mode || "guided") === "guided";
+        const parameterRows = (strategy.parameter_schema || []).map((parameter) => `
+          <div class="field" style="margin-top:10px;">
+            <label>${parameter.label}</label>
+            ${buildParameterInput(strategy.strategy_id, parameter, config.parameters_json[parameter.key], guidedMode && parameter.group !== "risk")}
+            <div class="muted">${parameter.description || ""}</div>
+          </div>
+        `).join("");
+        const card = document.createElement("div");
+        card.className = "mini-card";
+        card.innerHTML = `
+          <div class="mini-title">${config.display_name}</div>
+          <div class="muted">${strategy.description}</div>
+          <div class="toggle-row">
+            <span>Enabled</span>
+            <input id="enabled-${strategy.strategy_id}" type="checkbox" ${config.enabled ? "checked" : ""} />
+          </div>
+          <div class="field" style="margin-top:10px;">
+            <label>Timeframe</label>
+            <select id="timeframe-${strategy.strategy_id}">
+              <option value="1m" ${config.timeframe === "1m" ? "selected" : ""}>1m</option>
+              <option value="5m" ${config.timeframe === "5m" ? "selected" : ""}>5m</option>
+              <option value="15m" ${config.timeframe === "15m" ? "selected" : ""}>15m</option>
+            </select>
+          </div>
+          <div class="field" style="margin-top:10px;">
+            <label>Capital Allocation %</label>
+            <input id="allocation-${strategy.strategy_id}" type="number" min="0" max="100" value="${config.capital_allocation_pct}" />
+          </div>
+          <div class="field" style="margin-top:10px;">
+            <label>Risk Tolerance</label>
+            <input id="risk-${strategy.strategy_id}" type="range" min="0" max="100" value="${config.risk_tolerance}" />
+            <div class="row"><span class="pill" id="risk-value-${strategy.strategy_id}">${config.risk_tolerance}</span><span class="muted">${classifyRiskProfile(config.risk_tolerance)}</span></div>
+          </div>
+          ${parameterRows}
+          <div class="row" style="margin-top:12px;">
+            <button class="button" onclick="saveStrategyConfig('${strategy.strategy_id}')">Save Strategy</button>
+            <span class="muted">Mode: ${config.experience_mode}</span>
+          </div>
+        `;
+        container.appendChild(card);
+        const riskSlider = card.querySelector(`#risk-${strategy.strategy_id}`);
+        const riskValue = card.querySelector(`#risk-value-${strategy.strategy_id}`);
+        riskSlider.addEventListener("input", () => {
+          riskValue.textContent = riskSlider.value;
+        });
+      });
+    }
+
+    function renderBacktests(data) {
+      if (!backtestFormDirty) {
+        const prefs = loadStore(STORAGE_KEYS.backtest, {
+          strategy: "VWAP Strategy",
+          dataSource: "Polygon / Massive",
+          mode: "Simple Replay",
+          anchorDaysOld: 4,
+          simulationDays: 30,
+          startingCapital: 5000,
+          settlementDays: 1,
+          accountType: "Cash Account",
+          replaySpeed: "Instant"
+        });
+        document.getElementById("backtestStrategy").value = prefs.strategy;
+        document.getElementById("backtestDataSource").value = prefs.dataSource;
+        document.getElementById("backtestMode").value = prefs.mode;
+        document.getElementById("backtestAnchorDaysOld").value = prefs.anchorDaysOld;
+        document.getElementById("backtestSimulationDays").value = prefs.simulationDays;
+        document.getElementById("backtestStartingCapital").value = prefs.startingCapital;
+        document.getElementById("backtestSettlementDays").value = prefs.settlementDays;
+        document.getElementById("backtestAccountType").value = prefs.accountType;
+        document.getElementById("backtestReplaySpeed").value = prefs.replaySpeed || "Instant";
+      }
+
+      renderBacktestCriteriaEditor(data);
+
+      const tbody = document.getElementById("backtestRunsTable");
+      tbody.innerHTML = "";
+      (data.backtests.runs || []).forEach((run) => {
+        const row = document.createElement("tr");
+        row.className = "clickable-row";
+        row.innerHTML = `<td>${run.name}</td><td>${run.strategy_id}</td><td>${run.status}</td><td class="mono">${JSON.stringify(run.parameters)}</td><td class="mono">${formatTime(run.created_at)}</td>`;
+        row.addEventListener("click", () => {
+          latestBacktestRun = run;
+          renderBacktests(lastData);
+        });
+        row.classList.toggle("active", latestBacktestRun && latestBacktestRun.id === run.id);
+        tbody.appendChild(row);
+      });
+
+      if (!latestBacktestRun && (data.backtests.runs || []).length > 0) {
+        latestBacktestRun = data.backtests.runs[0];
+      }
+
+      if (latestBacktestRun) {
+        document.getElementById("backtestSummaryStatus").textContent = `Latest run: ${latestBacktestRun.name}`;
+        renderBacktestReport(latestBacktestRun);
+      } else {
+        document.getElementById("backtestSummaryStatus").textContent = "No backtest run from this screen yet.";
+        renderBacktestReport(null);
+      }
+    }
+
+    function renderOrders(data) {
+      const tbody = document.getElementById("ordersTable");
+      tbody.innerHTML = "";
+      (data.orders.orders || []).forEach((order) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${order.id}</td><td class="mono">${order.broker_order_id || "-"}</td><td>${order.symbol}</td><td>${order.side}</td><td>${order.quantity}</td><td>${order.order_type}</td><td>${order.status}</td><td>${order.price ?? "-"}</td><td class="mono">${formatTime(order.updated_at)}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderPositions(data) {
+      const tbody = document.getElementById("positionsTable");
+      tbody.innerHTML = "";
+      (data.positions.positions || []).forEach((position) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${position.symbol}</td><td>${position.quantity}</td><td>${position.average_price}</td><td>${position.unrealized_pnl}</td><td>${position.realized_pnl}</td><td class="mono">${formatTime(position.updated_at)}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderAnalytics(data) {
+      const summary = document.getElementById("analyticsSummary");
+      summary.innerHTML = "";
+      const metrics = data.analytics.summary || {};
+      const entries = Object.entries(metrics);
+      if (!entries.length) {
+        summary.innerHTML = `<div class="empty-state">Analytics snapshots will appear after order and fill activity.</div>`;
+      } else {
+        entries.forEach(([key, value]) => {
+          const item = document.createElement("div");
+          item.className = "mini-card";
+          item.innerHTML = `<div class="mini-title">${key}</div><div class="metric">${value}</div>`;
+          summary.appendChild(item);
+        });
+      }
+
+      const tbody = document.getElementById("intentsTable");
+      tbody.innerHTML = "";
+      (data.intents.intents || []).forEach((intent) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${intent.id}</td><td>${intent.strategy_id}</td><td>${intent.symbol}</td><td>${intent.side}</td><td>${intent.entry_price}</td><td>${intent.confidence}</td><td>${intent.status}</td><td class="mono">${formatTime(intent.created_at)}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderTradeCalendar(data) {
+      const container = document.getElementById("tradeCalendar");
+      container.innerHTML = "";
+      const positions = data.positions.positions || [];
+      const orders = data.orders.orders || [];
+      const cards = [
+        ["Today", `${orders.length} orders`, "Activity captured from local paper execution feed"],
+        ["This Week", `${positions.length} tracked symbols`, "Calendar aggregation placeholder for future analytics"],
+        ["Red/Green Days", "Pending", "Will populate once historical P&L aggregation is added"]
+      ];
+      cards.forEach(([title, value, detail]) => {
+        const card = document.createElement("div");
+        card.className = "mini-card";
+        card.innerHTML = `<div class="mini-title">${title}</div><div class="metric">${value}</div><div class="muted">${detail}</div>`;
+        container.appendChild(card);
+      });
+    }
+
+    function renderDataFeeds(data) {
+      const statusContainer = document.getElementById("dataFeedStatus");
+      statusContainer.innerHTML = "";
+      const overview = data.overview;
+      const runtimeOperations = (data.runtime.runtime_operations || {});
+      const connectionStatus = (data.apiSettings && data.apiSettings.status) || data.runtime.connection_status || {};
+      [
+        `Backend: ${overview.event_bus_backend}`,
+        `Stored ticks: ${overview.database.ticks}`,
+        `Recent events: ${overview.database.events}`,
+        `Simulated live feed: ${runtimeOperations.use_simulated_live_market_data ? "Enabled" : "Disabled"}`,
+        `External provider mode: ${runtimeOperations.external_market_data_enabled ? "Enabled" : "Disabled"}`,
+        `Polygon configured: ${connectionStatus.polygon && connectionStatus.polygon.configured ? "Yes" : "No"}`
+      ].forEach((text) => {
+        const item = document.createElement("div");
+        item.className = "mini-card";
+        item.textContent = text;
+        statusContainer.appendChild(item);
+      });
+
+      document.getElementById("simulatedLiveDataToggle").checked = !!runtimeOperations.use_simulated_live_market_data;
+      document.getElementById("externalMarketDataToggle").checked = !!runtimeOperations.external_market_data_enabled;
+      document.getElementById("historicalReplayToggle").checked = !!runtimeOperations.historical_replay_enabled;
+
+      const eventsContainer = document.getElementById("dataFeedEvents");
+      eventsContainer.innerHTML = "";
+      (data.events.events || []).slice(0, 6).forEach((event) => {
+        const item = document.createElement("div");
+        item.className = "mini-card";
+        item.innerHTML = `<div class="mini-title">${event.event_type}</div><div class="muted">${event.source} ${event.symbol ? `| ${event.symbol}` : ""}</div>`;
+        eventsContainer.appendChild(item);
+      });
+    }
+
+    function renderBrokerConnections() {
+      const settings = loadStore(STORAGE_KEYS.settings, {});
+      const preferredBroker = settings.preferredBroker || "Paper";
+      const container = document.getElementById("brokerConnections");
+      container.innerHTML = "";
+      const status = (lastData.apiSettings && lastData.apiSettings.status) || {};
+      [
+        ["Paper", preferredBroker === "Paper" ? "Active" : "Standby", "Built-in simulated execution path"],
+        [
+          "Alpaca",
+          status.alpaca && status.alpaca.enabled ? "Enabled" : "Standby",
+          status.alpaca && status.alpaca.configured
+            ? `Credentials loaded (${status.alpaca.base_url || "paper"})`
+            : "Adapter scaffold present, credentials not configured"
+        ],
+        [
+          "Webull",
+          status.webull && status.webull.enabled ? "Enabled" : "Standby",
+          status.webull && status.webull.configured
+            ? "Credentials loaded for future execution support"
+            : "Adapter scaffold present, credentials not configured"
+        ],
+        [
+          "Polygon",
+          status.polygon && status.polygon.enabled ? "Enabled" : "Standby",
+          status.polygon && status.polygon.configured
+            ? "API key stored for live market data"
+            : "Live data key not configured"
+        ]
+      ].forEach(([name, status, detail]) => {
+        const card = document.createElement("div");
+        card.className = "mini-card";
+        card.innerHTML = `<div class="mini-title">${name}</div><div class="pill">${status}</div><div class="muted" style="margin-top:8px;">${detail}</div>`;
+        container.appendChild(card);
+      });
+
+      if (!apiFormDirty) {
+        const credentials = (lastData.apiSettings && lastData.apiSettings.credentials) || {};
+        document.getElementById("polygonApiKey").value = credentials.polygon_api_key || "";
+        document.getElementById("alpacaApiKey").value = credentials.alpaca_api_key || "";
+        document.getElementById("alpacaSecretKey").value = credentials.alpaca_secret_key || "";
+        document.getElementById("alpacaBaseUrl").value = credentials.alpaca_base_url || "https://paper-api.alpaca.markets";
+        document.getElementById("webullUsername").value = credentials.webull_username || "";
+        document.getElementById("webullPassword").value = credentials.webull_password || "";
+        document.getElementById("polygonEnabledToggle").checked = !!credentials.polygon_enabled;
+        document.getElementById("alpacaEnabledToggle").checked = !!credentials.alpaca_enabled;
+        document.getElementById("webullEnabledToggle").checked = !!credentials.webull_enabled;
+      }
+
+      if (latestApiTestResult) {
+        document.getElementById("apiTestStatus").textContent = latestApiTestResult.message || "Test completed.";
+        document.getElementById("apiTestOutput").textContent = JSON.stringify(latestApiTestResult.sample_data, null, 2);
+      }
+    }
+
+    function renderRisk(data) {
+      const container = document.getElementById("riskLimitSummary");
+      container.innerHTML = "";
+      const risk = data.runtime.risk_limits;
+      Object.entries(risk).forEach(([key, value]) => {
+        const card = document.createElement("div");
+        card.className = "mini-card";
+        card.innerHTML = `<div class="mini-title">${key}</div><div class="metric">${value}</div>`;
+        container.appendChild(card);
+      });
+
+      const workspace = data.runtime.workspace_preferences || {};
+      document.getElementById("riskToleranceSlider").value = workspace.risk_tolerance ?? 50;
+      document.getElementById("riskToleranceValue").textContent = workspace.risk_tolerance ?? 50;
+      document.getElementById("selectedRiskProfile").textContent = classifyRiskProfile(workspace.risk_tolerance ?? 50);
+
+      const quickPick = document.getElementById("riskProfileQuickPick");
+      quickPick.innerHTML = "";
+      ((data.strategyControl && data.strategyControl.risk_profiles) || []).forEach((profile) => {
+        const btn = document.createElement("button");
+        btn.className = "button";
+        btn.textContent = profile.name;
+        btn.addEventListener("click", () => {
+          document.getElementById("riskToleranceSlider").value = profile.risk_tolerance;
+          document.getElementById("riskToleranceValue").textContent = profile.risk_tolerance;
+          document.getElementById("selectedRiskProfile").textContent = profile.name;
+        });
+        quickPick.appendChild(btn);
+      });
+    }
+
+    function renderLogs(data) {
+      document.getElementById("logOutput").textContent = (data.logs.lines || []).join("\n") || "No logs yet.";
+    }
+
+    function renderPaperTrading(data) {
+      const container = document.getElementById("paperTradingSummary");
+      container.innerHTML = "";
+      const cards = [
+        ["Orders", data.orders.orders.length, "Paper fills captured locally"],
+        ["Positions", data.positions.positions.length, "Open symbols in ledger"],
+        ["Trade Intents", data.intents.intents.length, "Strategy signals emitted"],
+        ["Backtests", data.backtests.runs.length, "Stored simulation runs"]
+      ];
+      cards.forEach(([title, value, detail]) => container.appendChild(buildMiniMetric(title, value, detail)));
+    }
+
+    function renderLiveTrading() {
+      const container = document.getElementById("liveTradingReadiness");
+      container.innerHTML = "";
+      [
+        "Broker auth flows are not implemented yet",
+        "Risk engine approval path is active",
+        "Execution engine currently uses paper fill simulation",
+        "Use Settings to choose preferred environment and broker"
+      ].forEach((text) => {
+        const item = document.createElement("div");
+        item.className = "mini-card";
+        item.textContent = text;
+        container.appendChild(item);
+      });
+    }
+
+    function renderSettings(data) {
+      const runtimeContainer = document.getElementById("runtimeConfigTable");
+      runtimeContainer.innerHTML = "";
+      const runtime = data.runtime;
+      [
+        `App: ${runtime.app_name}`,
+        `Environment: ${runtime.environment}`,
+        `API: ${runtime.api_host}:${runtime.api_port}`,
+        `Event Bus: ${runtime.event_bus_backend}`
+      ].forEach((text) => {
+        const item = document.createElement("div");
+        item.className = "mini-card";
+        item.textContent = text;
+        runtimeContainer.appendChild(item);
+      });
+
+      const settings = loadStore(STORAGE_KEYS.settings, {});
+      document.getElementById("defaultView").value = settings.defaultView || "dashboard";
+      document.getElementById("refreshInterval").value = String(settings.refreshInterval || 3000);
+      document.getElementById("preferredBroker").value = settings.preferredBroker || "Paper";
+      document.getElementById("preferredEnvironment").value = settings.preferredEnvironment || "Live Market Simulation";
+      document.getElementById("paperMode").value = settings.preferredEnvironment || "Live Market Simulation";
+      document.getElementById("settingsSavedText").textContent = "Saved locally in browser";
+    }
+
+    function renderLocalControls() {
+      const risk = loadStore(STORAGE_KEYS.risk, { killSwitch: false, requireConfirmation: true });
+      document.getElementById("killSwitchToggle").checked = !!risk.killSwitch;
+      document.getElementById("confirmToggle").checked = !!risk.requireConfirmation;
+    }
+
+    async function engineAction(engineName, action) {
+      try {
+        await fetchJson(`/system/engines/${engineName}/${action}`, { method: "POST" });
+        await refreshAll();
+      } catch (error) {
+        setError(`Engine action failed: ${error.message}`);
+      }
+    }
+
+    function addWatchlistSymbol() {
+      const input = document.getElementById("watchlistInput");
+      const symbol = input.value.trim().toUpperCase();
+      if (!symbol) return;
+      const list = loadStore(STORAGE_KEYS.watchlist, []);
+      if (!list.includes(symbol)) {
+        list.push(symbol);
+        saveStore(STORAGE_KEYS.watchlist, list);
+      }
+      input.value = "";
+      renderWatchlist();
+    }
+
+    function removeWatchlistSymbol(symbol) {
+      const list = loadStore(STORAGE_KEYS.watchlist, []).filter((item) => item !== symbol);
+      saveStore(STORAGE_KEYS.watchlist, list);
+      renderWatchlist();
+    }
+
+    function clearWatchlist() {
+      saveStore(STORAGE_KEYS.watchlist, []);
+      renderWatchlist();
+    }
+
+    function saveSettings() {
+      const settings = {
+        defaultView: document.getElementById("defaultView").value,
+        refreshInterval: Number(document.getElementById("refreshInterval").value),
+        preferredBroker: document.getElementById("preferredBroker").value,
+        preferredEnvironment: document.getElementById("preferredEnvironment").value
+      };
+      saveStore(STORAGE_KEYS.settings, settings);
+      document.getElementById("settingsSavedText").textContent = "Preferences saved";
+      scheduleRefresh();
+      renderBrokerConnections();
+    }
+
+    function saveScannerPrefs() {
+      return fetchJson("/scanner/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          min_price: Number(document.getElementById("scannerMinPrice").value),
+          max_price: Number(document.getElementById("scannerMaxPrice").value),
+          max_float_millions: Number(document.getElementById("scannerMaxFloat").value),
+          min_avg_volume: Number(document.getElementById("scannerMinAvgVolume").value),
+          max_market_cap_millions: Number(document.getElementById("scannerMaxMarketCap").value),
+          exclude_halted: document.getElementById("scannerExcludeHalted").value === "true"
+        })
+      }).then(async () => {
+        scannerFormDirty = false;
+        document.getElementById("scannerPrefsStatus").textContent = "Universe filters saved";
+        await refreshAll();
+      });
+    }
+
+    function saveEnvironment() {
+      const settings = loadStore(STORAGE_KEYS.settings, {});
+      settings.preferredEnvironment = document.getElementById("paperMode").value;
+      saveStore(STORAGE_KEYS.settings, settings);
+      document.getElementById("environmentStatus").textContent = `Saved: ${settings.preferredEnvironment}`;
+      renderBrokerConnections();
+    }
+
+    async function saveRiskState() {
+      const localRisk = {
+        killSwitch: document.getElementById("killSwitchToggle").checked,
+        requireConfirmation: document.getElementById("confirmToggle").checked
+      };
+      saveStore(STORAGE_KEYS.risk, localRisk);
+
+      if (!lastData.runtime || !lastData.runtime.workspace_preferences) {
+        return;
+      }
+
+      await fetchJson("/strategies/workspace-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...lastData.runtime.workspace_preferences,
+          kill_switch: localRisk.killSwitch,
+          require_confirmation: localRisk.requireConfirmation
+        })
+      });
+    }
+
+    function saveBacktestPrefs() {
+      saveStore(STORAGE_KEYS.backtest, {
+        strategy: document.getElementById("backtestStrategy").value,
+        dataSource: document.getElementById("backtestDataSource").value,
+        mode: document.getElementById("backtestMode").value,
+        anchorDaysOld: Number(document.getElementById("backtestAnchorDaysOld").value),
+        simulationDays: Number(document.getElementById("backtestSimulationDays").value),
+        startingCapital: Number(document.getElementById("backtestStartingCapital").value),
+        settlementDays: Number(document.getElementById("backtestSettlementDays").value),
+        accountType: document.getElementById("backtestAccountType").value,
+        replaySpeed: document.getElementById("backtestReplaySpeed").value
+      });
+      backtestFormDirty = false;
+      document.getElementById("backtestPresetStatus").textContent = "Backtest template saved";
+    }
+
+    async function saveBacktestCriteria(options = {}) {
+      const { refresh = true, statusText = "Backtest universe and strategy inputs saved" } = options;
+      const strategy = getSelectedBacktestStrategy();
+      if (!strategy) {
+        throw new Error("Select a valid strategy before saving backtest criteria.");
+      }
+
+      const scannerPayload = {
+        min_price: Number(document.getElementById("backtestUniverseMinPrice").value),
+        max_price: Number(document.getElementById("backtestUniverseMaxPrice").value),
+        max_float_millions: Number(document.getElementById("backtestUniverseMaxFloat").value),
+        min_avg_volume: Number(document.getElementById("backtestUniverseMinAvgVolume").value),
+        max_market_cap_millions: Number(document.getElementById("backtestUniverseMaxMarketCap").value),
+        exclude_halted: document.getElementById("backtestUniverseExcludeHalted").value === "true"
+      };
+
+      const parameters = {};
+      document.querySelectorAll("#backtestStrategyParameterEditor .backtest-parameter-input").forEach((input) => {
+        const key = input.dataset.parameterKey;
+        const raw = input.value;
+        parameters[key] = raw === "" ? raw : Number.isNaN(Number(raw)) ? raw : Number(raw);
+      });
+
+      await fetchJson("/scanner/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(scannerPayload)
+      });
+
+      await fetchJson(`/strategies/configurations/${strategy.strategy_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_name: strategy.configuration.display_name,
+          enabled: strategy.configuration.enabled,
+          experience_mode: strategy.configuration.experience_mode,
+          timeframe: strategy.configuration.timeframe,
+          capital_allocation_pct: Number(strategy.configuration.capital_allocation_pct),
+          risk_tolerance: Number(strategy.configuration.risk_tolerance),
+          parameters_json: parameters
+        })
+      });
+
+      backtestCriteriaDirty = false;
+      scannerFormDirty = false;
+      document.getElementById("backtestCriteriaStatus").textContent = statusText;
+      if (refresh) {
+        await refreshAll();
+      }
+    }
+
+    async function runBacktest() {
+      try {
+        await saveBacktestCriteria({
+          refresh: false,
+          statusText: "Using the saved universe filters and strategy inputs for this run"
+        });
+        document.getElementById("backtestSummaryStatus").textContent = "Running accelerated backtest...";
+        document.getElementById("backtestSummaryOutput").textContent = "Backtest in progress...";
+        const response = await fetchJson("/backtests/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            strategy_name: document.getElementById("backtestStrategy").value,
+            data_source: document.getElementById("backtestDataSource").value,
+            mode: document.getElementById("backtestMode").value,
+            anchor_days_old: Number(document.getElementById("backtestAnchorDaysOld").value),
+            simulation_days: Number(document.getElementById("backtestSimulationDays").value),
+            starting_capital: Number(document.getElementById("backtestStartingCapital").value),
+            settlement_days: Number(document.getElementById("backtestSettlementDays").value),
+            account_type: document.getElementById("backtestAccountType").value,
+            replay_speed: document.getElementById("backtestReplaySpeed").value
+          })
+        });
+        latestBacktestRun = response.run;
+        document.getElementById("backtestPresetStatus").textContent = "Backtest completed";
+        backtestFormDirty = false;
+        await refreshAll();
+      } catch (error) {
+        setError(`Backtest failed: ${error.message}`);
+      }
+    }
+
+    function hydrateInitialState() {
+      renderWatchlist();
+      renderLocalControls();
+      const settings = loadStore(STORAGE_KEYS.settings, {});
+      setView(settings.defaultView || "dashboard");
+    }
+
+    async function saveStrategyWorkspace() {
+      const workspace = (lastData.strategyControl && lastData.strategyControl.workspace_preferences) || {};
+      const payload = {
+        ...workspace,
+        experience_mode: document.getElementById("strategyExperienceMode").value,
+        risk_tolerance: Number(document.getElementById("globalRiskTolerance").value),
+        auto_apply_to_strategies: true,
+        kill_switch: document.getElementById("killSwitchToggle").checked,
+        require_confirmation: document.getElementById("confirmToggle").checked
+      };
+      await fetchJson("/strategies/workspace-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      document.getElementById("strategyWorkspaceStatus").textContent = "Strategy workspace saved";
+      await refreshAll();
+    }
+
+    async function saveRiskProfile() {
+      const workspace = (lastData.strategyControl && lastData.strategyControl.workspace_preferences) || {};
+      const payload = {
+        ...workspace,
+        risk_tolerance: Number(document.getElementById("riskToleranceSlider").value),
+        kill_switch: document.getElementById("killSwitchToggle").checked,
+        require_confirmation: document.getElementById("confirmToggle").checked
+      };
+      await fetchJson("/strategies/workspace-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      await refreshAll();
+    }
+
+    async function saveApiConnections() {
+      const response = await fetchJson("/connections/api-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          polygon_api_key: document.getElementById("polygonApiKey").value.trim(),
+          alpaca_api_key: document.getElementById("alpacaApiKey").value.trim(),
+          alpaca_secret_key: document.getElementById("alpacaSecretKey").value.trim(),
+          alpaca_base_url: document.getElementById("alpacaBaseUrl").value.trim(),
+          webull_username: document.getElementById("webullUsername").value.trim(),
+          webull_password: document.getElementById("webullPassword").value.trim(),
+          polygon_enabled: document.getElementById("polygonEnabledToggle").checked,
+          alpaca_enabled: document.getElementById("alpacaEnabledToggle").checked,
+          webull_enabled: document.getElementById("webullEnabledToggle").checked
+        })
+      });
+      apiFormDirty = false;
+      lastData.apiSettings = response;
+      document.getElementById("apiSettingsStatus").textContent = "API settings saved locally";
+      await refreshAll();
+    }
+
+    async function runApiTest(provider) {
+      const endpoint = provider === "polygon" ? "/connections/test/polygon" : "/connections/test/alpaca";
+      document.getElementById("apiTestStatus").textContent = `Testing ${provider}...`;
+      document.getElementById("apiTestOutput").textContent = "Running provider test...";
+      const response = await fetchJson(endpoint, { method: "POST" });
+      latestApiTestResult = response.result;
+      document.getElementById("apiTestStatus").textContent = response.result.message || "Test finished.";
+      document.getElementById("apiTestOutput").textContent = JSON.stringify(response.result.sample_data, null, 2);
+      renderBrokerConnections();
+    }
+
+    async function saveRuntimeOperations() {
+      await fetchJson("/runtime/operations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          use_simulated_live_market_data: document.getElementById("simulatedLiveDataToggle").checked,
+          external_market_data_enabled: document.getElementById("externalMarketDataToggle").checked,
+          historical_replay_enabled: document.getElementById("historicalReplayToggle").checked
+        })
+      });
+      document.getElementById("runtimeOperationsStatus").textContent = "Live data mode saved";
+      await refreshAll();
+    }
+
+    async function saveStrategyConfig(strategyId) {
+      const strategy = ((lastData.strategyControl && lastData.strategyControl.strategies) || []).find(
+        (item) => item.strategy_id === strategyId
+      );
+      if (!strategy) {
+        setError(`Strategy ${strategyId} not found in control center data.`);
+        return;
+      }
+
+      const parameters = {};
+      document.querySelectorAll(`.strategy-parameter-input[data-strategy-id="${strategyId}"]`).forEach((input) => {
+        const key = input.dataset.parameterKey;
+        const raw = input.value;
+        parameters[key] = raw === "" ? raw : Number.isNaN(Number(raw)) ? raw : Number(raw);
+      });
+
+      const payload = {
+        display_name: strategy.configuration.display_name,
+        enabled: document.getElementById(`enabled-${strategyId}`).checked,
+        experience_mode: document.getElementById("strategyExperienceMode").value,
+        timeframe: document.getElementById(`timeframe-${strategyId}`).value,
+        capital_allocation_pct: Number(document.getElementById(`allocation-${strategyId}`).value),
+        risk_tolerance: Number(document.getElementById(`risk-${strategyId}`).value),
+        parameters_json: parameters
+      };
+
+      await fetchJson(`/strategies/configurations/${strategyId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      await refreshAll();
+    }
+
+    async function refreshAll() {
+      try {
+        const [
+          runtimeVersion,
+          overview,
+          runtime,
+          apiSettings,
+          strategyControl,
+          events,
+          scanner,
+          intents,
+          orders,
+          positions,
+          backtests,
+          analytics,
+          logs
+        ] = await Promise.all([
+          fetchJson("/system/runtime-version"),
+          fetchJson("/system/overview"),
+          fetchJson("/runtime/config"),
+          fetchJson("/connections/api-settings"),
+          fetchJson("/strategies/control-center"),
+          fetchJson("/system/events/recent?limit=12"),
+          fetchJson("/scanner/universe?limit=20"),
+          fetchJson("/trading/intents?limit=25"),
+          fetchJson("/trading/orders?limit=25"),
+          fetchJson("/trading/positions"),
+          fetchJson("/backtests/runs?limit=20"),
+          fetchJson("/analytics/summary"),
+          fetchJson("/system/logs?limit=160")
+        ]);
+
+        if (currentRuntimeInstanceId && runtimeVersion.startup_instance_id !== currentRuntimeInstanceId) {
+          window.location.reload();
+          return;
+        }
+        currentRuntimeInstanceId = runtimeVersion.startup_instance_id;
+
+        lastData = {
+          runtimeVersion,
+          overview,
+          runtime,
+          apiSettings,
+          strategyControl,
+          events,
+          scanner,
+          intents,
+          orders,
+          positions,
+          backtests,
+          analytics,
+          logs
+        };
+        setError("");
+        renderDashboard(lastData);
+        renderScanner(lastData);
+        renderWatchlist();
+        renderStrategies(lastData);
+        renderBacktests(lastData);
+        renderOrders(lastData);
+        renderPositions(lastData);
+        renderAnalytics(lastData);
+        renderTradeCalendar(lastData);
+        renderDataFeeds(lastData);
+        renderBrokerConnections();
+        renderRisk(lastData);
+        renderLogs(lastData);
+        renderPaperTrading(lastData);
+        renderLiveTrading();
+        renderSettings(lastData);
+      } catch (error) {
+        setError(`Workspace refresh failed: ${error.message}`);
+        document.getElementById("globalStatus").textContent = "Platform OFFLINE";
+      }
+    }
+
+    function scheduleRefresh() {
+      if (refreshHandle) {
+        clearInterval(refreshHandle);
+      }
+      const settings = loadStore(STORAGE_KEYS.settings, {});
+      const interval = Number(settings.refreshInterval || 3000);
+      refreshHandle = setInterval(refreshAll, interval);
+    }
+
+    document.querySelectorAll(".nav-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setView(btn.dataset.view));
+    });
+    document.getElementById("advancedNavToggle").addEventListener("click", () => {
+      const advancedNav = document.getElementById("advancedNav");
+      setAdvancedNavOpen(!advancedNav.classList.contains("open"));
+    });
+
+    document.getElementById("manualRefresh").addEventListener("click", refreshAll);
+    document.getElementById("addWatchlistBtn").addEventListener("click", addWatchlistSymbol);
+    document.getElementById("clearWatchlistBtn").addEventListener("click", clearWatchlist);
+    document.getElementById("saveSettingsBtn").addEventListener("click", saveSettings);
+    document.getElementById("saveApiConnectionsBtn").addEventListener("click", saveApiConnections);
+    document.getElementById("testPolygonBtn").addEventListener("click", () => runApiTest("polygon"));
+    document.getElementById("testAlpacaBtn").addEventListener("click", () => runApiTest("alpaca"));
+    document.getElementById("saveStrategyWorkspaceBtn").addEventListener("click", saveStrategyWorkspace);
+    document.getElementById("saveScannerPrefs").addEventListener("click", saveScannerPrefs);
+    document.getElementById("saveEnvironmentBtn").addEventListener("click", saveEnvironment);
+    document.getElementById("saveRuntimeOperationsBtn").addEventListener("click", saveRuntimeOperations);
+    document.getElementById("saveRiskProfileBtn").addEventListener("click", saveRiskProfile);
+    document.getElementById("saveBacktestPrefs").addEventListener("click", saveBacktestPrefs);
+    document.getElementById("saveBacktestCriteriaBtn").addEventListener("click", async () => {
+      try {
+        await saveBacktestCriteria();
+      } catch (error) {
+        setError(`Could not save backtest criteria: ${error.message}`);
+      }
+    });
+    document.getElementById("runBacktestBtn").addEventListener("click", runBacktest);
+    document.getElementById("killSwitchToggle").addEventListener("change", saveRiskState);
+    document.getElementById("confirmToggle").addEventListener("change", saveRiskState);
+    document.getElementById("globalRiskTolerance").addEventListener("input", (event) => {
+      document.getElementById("globalRiskToleranceValue").textContent = event.target.value;
+      document.getElementById("globalRiskProfileText").textContent = classifyRiskProfile(Number(event.target.value));
+    });
+    document.getElementById("riskToleranceSlider").addEventListener("input", (event) => {
+      document.getElementById("riskToleranceValue").textContent = event.target.value;
+      document.getElementById("selectedRiskProfile").textContent = classifyRiskProfile(Number(event.target.value));
+    });
+    document.getElementById("watchlistInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") addWatchlistSymbol();
+    });
+    [
+      "polygonApiKey",
+      "alpacaApiKey",
+      "alpacaSecretKey",
+      "alpacaBaseUrl",
+      "webullUsername",
+      "webullPassword",
+      "polygonEnabledToggle",
+      "alpacaEnabledToggle",
+      "webullEnabledToggle"
+    ].forEach((id) => {
+      const element = document.getElementById(id);
+      const eventName = element.type === "checkbox" ? "change" : "input";
+      element.addEventListener(eventName, () => {
+        apiFormDirty = true;
+        document.getElementById("apiSettingsStatus").textContent = "Unsaved API changes";
+      });
+    });
+    [
+      "scannerMinPrice",
+      "scannerMaxPrice",
+      "scannerMaxFloat",
+      "scannerMinAvgVolume",
+      "scannerMaxMarketCap",
+      "scannerExcludeHalted"
+    ].forEach((id) => {
+      const element = document.getElementById(id);
+      const eventName = element.tagName === "SELECT" ? "change" : "input";
+      element.addEventListener(eventName, () => {
+        scannerFormDirty = true;
+        document.getElementById("scannerPrefsStatus").textContent = "Unsaved scanner changes";
+      });
+    });
+    [
+      "backtestUniverseMinPrice",
+      "backtestUniverseMaxPrice",
+      "backtestUniverseMaxFloat",
+      "backtestUniverseMinAvgVolume",
+      "backtestUniverseMaxMarketCap",
+      "backtestUniverseExcludeHalted"
+    ].forEach((id) => {
+      const element = document.getElementById(id);
+      const eventName = element.tagName === "SELECT" ? "change" : "input";
+      element.addEventListener(eventName, () => markBacktestCriteriaDirty());
+    });
+    document.getElementById("backtestStrategy").addEventListener("change", () => {
+      backtestCriteriaDirty = false;
+      backtestCriteriaStrategyId = null;
+      renderBacktestCriteriaEditor(lastData);
+    });
+    [
+      "backtestStrategy",
+      "backtestDataSource",
+      "backtestMode",
+      "backtestAnchorDaysOld",
+      "backtestSimulationDays",
+      "backtestStartingCapital",
+      "backtestSettlementDays",
+      "backtestAccountType",
+      "backtestReplaySpeed"
+    ].forEach((id) => {
+      const element = document.getElementById(id);
+      const eventName = element.tagName === "SELECT" ? "change" : "input";
+      element.addEventListener(eventName, () => {
+        backtestFormDirty = true;
+        document.getElementById("backtestPresetStatus").textContent = "Unsaved backtest changes";
+      });
+    });
+
+    hydrateInitialState();
+    setAdvancedNavOpen(false);
+    refreshAll();
+    scheduleRefresh();
+
+    window.engineAction = engineAction;
+    window.removeWatchlistSymbol = removeWatchlistSymbol;
+    window.saveStrategyConfig = saveStrategyConfig;
+  </script>
+</body>
+</html>
+
