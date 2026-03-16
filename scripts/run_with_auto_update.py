@@ -10,8 +10,14 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
+from config.settings import settings
+from utils.git_updates import UPDATE_REQUEST_FILE, clear_update_request
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 START_SCRIPT = PROJECT_ROOT / "scripts" / "start_platform.py"
 HEALTH_URL = "http://127.0.0.1:8000/health"
 DEFAULT_CHECK_INTERVAL_SECONDS = 60
@@ -103,10 +109,17 @@ def _wait_for_health(timeout_seconds: int = 45) -> bool:
 
 
 class PlatformSupervisor:
-    def __init__(self, python_executable: str, open_browser: bool, check_interval_seconds: int) -> None:
+    def __init__(
+        self,
+        python_executable: str,
+        open_browser: bool,
+        check_interval_seconds: int,
+        auto_apply_enabled: bool,
+    ) -> None:
         self.python_executable = python_executable
         self.open_browser = open_browser
         self.check_interval_seconds = max(15, check_interval_seconds)
+        self.auto_apply_enabled = auto_apply_enabled
         self.process: subprocess.Popen | None = None
         self.browser_opened = False
 
@@ -138,7 +151,7 @@ class PlatformSupervisor:
         else:
             print("Backend did not report healthy within the expected window.")
 
-    def sync_with_remote(self) -> bool:
+    def sync_with_remote(self, *, apply_update: bool) -> bool:
         if not _is_git_checkout():
             print("Auto update is disabled because this folder is not a git clone yet.")
             return False
@@ -152,6 +165,10 @@ class PlatformSupervisor:
             print("Git fetch failed. Keeping the current local version.")
             return False
         if not _is_behind_upstream():
+            clear_update_request()
+            return False
+        if not apply_update:
+            print("Git update detected. Waiting for an in-app approval before applying it.")
             return False
 
         changed_files = _pending_update_files()
@@ -167,11 +184,15 @@ class PlatformSupervisor:
             _install_dependencies(self.python_executable)
 
         print("Code updated from Git. Restarting backend...")
+        clear_update_request()
         return True
+
+    def update_requested(self) -> bool:
+        return UPDATE_REQUEST_FILE.exists()
 
     def run(self) -> None:
         try:
-            self.sync_with_remote()
+            self.sync_with_remote(apply_update=self.auto_apply_enabled)
             self.start_backend()
             self.ensure_browser_open()
             next_update_check = time.time() + self.check_interval_seconds
@@ -184,9 +205,23 @@ class PlatformSupervisor:
                     self.ensure_browser_open()
                     next_update_check = time.time() + self.check_interval_seconds
 
+                if self.update_requested():
+                    try:
+                        should_restart = self.sync_with_remote(apply_update=True)
+                    except RuntimeError as error:
+                        print(str(error))
+                        should_restart = False
+                    if should_restart:
+                        self.stop_backend()
+                        self.start_backend()
+                        self.ensure_browser_open()
+                    next_update_check = time.time() + self.check_interval_seconds
+
                 if time.time() >= next_update_check:
                     try:
-                        should_restart = self.sync_with_remote()
+                        should_restart = self.sync_with_remote(
+                            apply_update=self.auto_apply_enabled or self.update_requested()
+                        )
                     except RuntimeError as error:
                         print(str(error))
                         should_restart = False
@@ -209,12 +244,15 @@ def main() -> int:
     args = parser.parse_args()
 
     auto_update_enabled = _truthy(os.getenv("GIT_AUTO_UPDATE_ENABLED"), default=True)
+    auto_apply_enabled = _truthy(os.getenv("GIT_AUTO_APPLY_ENABLED"), default=False)
     check_interval_seconds = int(os.getenv("GIT_AUTO_UPDATE_INTERVAL_SECONDS", DEFAULT_CHECK_INTERVAL_SECONDS))
+    settings.local_state_dir.mkdir(parents=True, exist_ok=True)
 
     supervisor = PlatformSupervisor(
         python_executable=sys.executable,
         open_browser=args.open_browser,
         check_interval_seconds=check_interval_seconds,
+        auto_apply_enabled=auto_apply_enabled,
     )
 
     if not auto_update_enabled:

@@ -472,6 +472,57 @@
       font-size: 13px;
     }
 
+    .update-banner {
+      display: none;
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(183, 255, 60, 0.32);
+      background: linear-gradient(180deg, rgba(183, 255, 60, 0.10), rgba(183, 255, 60, 0.04));
+      box-shadow: var(--shadow);
+    }
+
+    .update-banner.visible {
+      display: block;
+    }
+
+    .update-banner-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .update-banner-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #e9f9c2;
+    }
+
+    .update-banner-body {
+      margin-top: 10px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .update-commit-list, .update-file-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .update-commit-item, .update-file-item {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(0, 0, 0, 0.16);
+    }
+
+    .update-file-item {
+      font-family: Consolas, Menlo, monospace;
+      font-size: 12px;
+    }
+
     pre.log-output {
       margin: 0;
       background: #1b1b1b;
@@ -556,12 +607,36 @@
         </div>
         <div class="topbar-actions">
           <div id="globalStatus" class="badge">Loading...</div>
+          <div id="updateStatusBadge" class="chip">No updates</div>
           <div id="refreshTime" class="chip">Waiting for data</div>
           <button id="manualRefresh" class="button">Refresh</button>
         </div>
       </div>
 
       <div id="errorBanner" class="error-banner"></div>
+      <div id="updateBanner" class="update-banner">
+        <div class="update-banner-header">
+          <div>
+            <div id="updateBannerTitle" class="update-banner-title">Git update available</div>
+            <div id="updateBannerMessage" class="muted">A teammate pushed new changes.</div>
+          </div>
+          <div class="row">
+            <button id="reviewUpdateBtn" class="button">Review Update</button>
+            <button id="applyUpdateBtn" class="button">Apply Update</button>
+            <button id="dismissUpdateBtn" class="button">Dismiss</button>
+          </div>
+        </div>
+        <div class="update-banner-body">
+          <div>
+            <div class="report-section-title">Incoming Commits</div>
+            <div id="updateCommitList" class="update-commit-list"></div>
+          </div>
+          <div>
+            <div class="report-section-title">Changed Files</div>
+            <div id="updateFileList" class="update-file-list"></div>
+          </div>
+        </div>
+      </div>
 
       <section id="view-dashboard" class="view active">
         <div class="grid">
@@ -1341,7 +1416,8 @@
       settings: "tradingPlatform.settings",
       scanner: "tradingPlatform.scanner",
       risk: "tradingPlatform.risk",
-      backtest: "tradingPlatform.backtest"
+      backtest: "tradingPlatform.backtest",
+      dismissedUpdateCommit: "tradingPlatform.dismissedUpdateCommit"
     };
 
     const VIEW_META = {
@@ -1374,6 +1450,7 @@
     let latestBacktestRun = null;
     let backtestCriteriaStrategyId = null;
     let currentRuntimeInstanceId = null;
+    let updateApplyInProgress = false;
 
     function loadStore(key, fallback) {
       try {
@@ -1433,6 +1510,99 @@
           <div class="report-stat-subvalue">${subvalue}</div>
         </div>
       `;
+    }
+
+    function dismissCurrentUpdate() {
+      const status = lastData.updateStatus || {};
+      if (status.upstream_commit) {
+        saveStore(STORAGE_KEYS.dismissedUpdateCommit, status.upstream_commit);
+      }
+      renderUpdateStatus(status);
+    }
+
+    function reviewCurrentUpdate() {
+      setView("dashboard");
+      const banner = document.getElementById("updateBanner");
+      if (banner.classList.contains("visible")) {
+        banner.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    async function applyCurrentUpdate() {
+      try {
+        updateApplyInProgress = true;
+        document.getElementById("applyUpdateBtn").disabled = true;
+        document.getElementById("updateBannerMessage").textContent = "Update requested. Waiting for the local launcher to pull and restart...";
+        const status = await fetchJson("/system/updates/apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        lastData.updateStatus = status;
+        renderUpdateStatus(status);
+      } catch (error) {
+        setError(`Could not request workstation update: ${error.message}`);
+      } finally {
+        updateApplyInProgress = false;
+      }
+    }
+
+    function renderUpdateStatus(status) {
+      const badge = document.getElementById("updateStatusBadge");
+      const banner = document.getElementById("updateBanner");
+      const title = document.getElementById("updateBannerTitle");
+      const message = document.getElementById("updateBannerMessage");
+      const commitList = document.getElementById("updateCommitList");
+      const fileList = document.getElementById("updateFileList");
+      const applyBtn = document.getElementById("applyUpdateBtn");
+      const dismissedCommit = loadStore(STORAGE_KEYS.dismissedUpdateCommit, null);
+
+      if (!status || (!status.available && !status.update_requested)) {
+        badge.textContent = "No updates";
+        banner.classList.remove("visible");
+        return;
+      }
+
+      const shouldHideForDismissedCommit = (
+        status.available
+        && dismissedCommit
+        && dismissedCommit === status.upstream_commit
+        && !status.update_requested
+      );
+
+      if (shouldHideForDismissedCommit) {
+        badge.textContent = "Update hidden";
+        banner.classList.remove("visible");
+        return;
+      }
+
+      banner.classList.add("visible");
+      title.textContent = status.update_requested ? "Update queued for this workstation" : "Git update available";
+      message.textContent = status.message || "Incoming changes detected.";
+
+      if (status.update_requested) {
+        badge.textContent = "Update queued";
+      } else if (status.can_apply) {
+        badge.textContent = `${(status.pending_commits || []).length} update(s)`;
+      } else {
+        badge.textContent = "Update blocked";
+      }
+
+      const commits = status.pending_commits || [];
+      commitList.innerHTML = commits.length
+        ? commits.map((commit) => `
+            <div class="update-commit-item">
+              <div><strong>${commit.subject || commit.short_hash}</strong></div>
+              <div class="muted mono">${commit.short_hash || "-"} | ${commit.author || "-"} | ${commit.authored_at || "-"}</div>
+            </div>
+          `).join("")
+        : '<div class="update-commit-item muted">No incoming commit summary available.</div>';
+
+      const files = status.changed_files || [];
+      fileList.innerHTML = files.length
+        ? files.map((file) => `<div class="update-file-item">${file}</div>`).join("")
+        : '<div class="update-file-item muted">No changed-file list available.</div>';
+
+      applyBtn.disabled = updateApplyInProgress || !status.can_apply || !!status.update_requested;
     }
 
     function renderBacktestReport(run) {
@@ -2478,10 +2648,11 @@
       await refreshAll();
     }
 
-    async function refreshAll() {
+    async function refreshAll(forceUpdateFetch = false) {
       try {
         const [
           runtimeVersion,
+          updateStatus,
           overview,
           runtime,
           apiSettings,
@@ -2496,6 +2667,7 @@
           logs
         ] = await Promise.all([
           fetchJson("/system/runtime-version"),
+          fetchJson(`/system/updates/status${forceUpdateFetch ? "?force_fetch=true" : ""}`),
           fetchJson("/system/overview"),
           fetchJson("/runtime/config"),
           fetchJson("/connections/api-settings"),
@@ -2518,6 +2690,7 @@
 
         lastData = {
           runtimeVersion,
+          updateStatus,
           overview,
           runtime,
           apiSettings,
@@ -2532,6 +2705,7 @@
           logs
         };
         setError("");
+        renderUpdateStatus(updateStatus);
         renderDashboard(lastData);
         renderScanner(lastData);
         renderWatchlist();
@@ -2571,7 +2745,10 @@
       setAdvancedNavOpen(!advancedNav.classList.contains("open"));
     });
 
-    document.getElementById("manualRefresh").addEventListener("click", refreshAll);
+    document.getElementById("manualRefresh").addEventListener("click", () => refreshAll(true));
+    document.getElementById("reviewUpdateBtn").addEventListener("click", reviewCurrentUpdate);
+    document.getElementById("applyUpdateBtn").addEventListener("click", applyCurrentUpdate);
+    document.getElementById("dismissUpdateBtn").addEventListener("click", dismissCurrentUpdate);
     document.getElementById("addWatchlistBtn").addEventListener("click", addWatchlistSymbol);
     document.getElementById("clearWatchlistBtn").addEventListener("click", clearWatchlist);
     document.getElementById("saveSettingsBtn").addEventListener("click", saveSettings);

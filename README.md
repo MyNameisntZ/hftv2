@@ -95,8 +95,8 @@ What the launcher does:
 - starts the backend
 - opens the dashboard after the health check succeeds
 - checks the tracked Git branch for new commits every 60 seconds by default
-- runs `git pull --ff-only` when the remote is ahead
-- restarts the backend after a successful update
+- shows incoming Git updates inside the workstation UI with commit summaries and changed files
+- applies the update and restarts the backend when the local machine approves it from the UI
 - lets the browser auto-reload when the backend instance changes
 
 Local-only secrets:
@@ -109,4 +109,5 @@ Optional launcher environment variables:
 
 - `GIT_AUTO_UPDATE_ENABLED=true`
 - `GIT_AUTO_UPDATE_INTERVAL_SECONDS=60`
+- `GIT_AUTO_APPLY_ENABLED=false`
 

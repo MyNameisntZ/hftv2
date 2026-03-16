@@ -52,6 +52,7 @@ from utils.schemas import (
     StrategyConfigurationPayload,
     WorkspacePreferencePayload,
 )
+from utils.git_updates import get_git_update_status, request_git_update
 from utils.runtime_version import get_runtime_version
 from utils.system_monitor import build_system_overview
 
@@ -107,6 +108,16 @@ async def health() -> dict:
 @app.get("/system/runtime-version")
 async def runtime_version() -> dict:
     return get_runtime_version()
+
+
+@app.get("/system/updates/status")
+async def system_update_status(force_fetch: bool = False) -> dict:
+    return get_git_update_status(force_fetch=force_fetch)
+
+
+@app.post("/system/updates/apply")
+async def system_apply_update() -> dict:
+    return request_git_update()
 
 
 @app.get("/system/overview")
