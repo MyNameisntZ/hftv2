@@ -326,6 +326,7 @@ def _generate_bull_flag_candidates(
 
 def _simulate_account(
     candidates: list[CandidateTrade],
+    parameters: dict,
     starting_capital: float,
     account_type: str,
     settlement_days: int,
@@ -515,6 +516,7 @@ async def run_alpaca_historical_backtest(
         results.append(
             _simulate_account(
                 candidates,
+                variant,
                 starting_capital,
                 account_type,
                 settlement_days,
