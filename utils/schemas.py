@@ -73,7 +73,7 @@ class ScannerSettingsPayload(BaseModel):
 
 class BacktestRunPayload(BaseModel):
     strategy_name: str
-    data_source: str = "Polygon / Massive"
+    data_source: str = "Alpaca Historical Data"
     mode: str = "Simple Replay"
     anchor_days_old: int = 4
     simulation_days: int = 30

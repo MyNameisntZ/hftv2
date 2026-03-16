@@ -4,6 +4,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse
@@ -13,6 +14,7 @@ from adapters.brokers.alpaca.client import AlpacaBrokerAdapter
 from adapters.data_providers.polygon_massive.client import PolygonMassiveAdapter
 from config.logging import configure_logging
 from config.settings import settings
+from core.backtest_engine.alpaca_historical import run_alpaca_historical_backtest
 from core.orchestrator import PlatformOrchestrator
 from core.backtest_engine.simulator import run_accelerated_backtest
 from database.init_db import init_db
@@ -451,21 +453,53 @@ async def run_backtest(payload: BacktestRunPayload) -> dict:
     strategy_id = strategy["strategy_id"]
     strategy_config = strategy["configuration"]
     scanner_settings = get_scanner_settings()
+    api_credentials = get_api_credentials()
 
-    result_summary = run_accelerated_backtest(
-        strategy_id=strategy_id,
-        strategy_name=payload.strategy_name,
-        base_parameters=strategy_config["parameters_json"],
-        scanner_settings=scanner_settings,
-        mode=payload.mode,
-        anchor_days_old=payload.anchor_days_old,
-        simulation_days=payload.simulation_days,
-        starting_capital=payload.starting_capital,
-        settlement_days=payload.settlement_days,
-        account_type=payload.account_type,
-        replay_speed=payload.replay_speed,
-        data_source=payload.data_source,
+    use_alpaca_historical = (
+        payload.data_source != "Local Historical Cache"
+        and bool(api_credentials.get("alpaca_api_key"))
+        and bool(api_credentials.get("alpaca_secret_key"))
     )
+
+    if use_alpaca_historical and strategy_id == "bull_flag_breakout":
+        try:
+            result_summary = await run_alpaca_historical_backtest(
+                adapter=alpaca_adapter,
+                credentials=api_credentials,
+                strategy_id=strategy_id,
+                strategy_name=payload.strategy_name,
+                base_parameters=strategy_config["parameters_json"],
+                scanner_settings=scanner_settings,
+                mode=payload.mode,
+                anchor_days_old=payload.anchor_days_old,
+                simulation_days=payload.simulation_days,
+                starting_capital=payload.starting_capital,
+                settlement_days=payload.settlement_days,
+                account_type=payload.account_type,
+                replay_speed=payload.replay_speed,
+            )
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Alpaca historical request failed with status {exc.response.status_code}.",
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Historical backtest failed: {exc}") from exc
+    else:
+        result_summary = run_accelerated_backtest(
+            strategy_id=strategy_id,
+            strategy_name=payload.strategy_name,
+            base_parameters=strategy_config["parameters_json"],
+            scanner_settings=scanner_settings,
+            mode=payload.mode,
+            anchor_days_old=payload.anchor_days_old,
+            simulation_days=payload.simulation_days,
+            starting_capital=payload.starting_capital,
+            settlement_days=payload.settlement_days,
+            account_type=payload.account_type,
+            replay_speed=payload.replay_speed,
+            data_source=payload.data_source,
+        )
 
     with SessionLocal() as db:
         run = BacktestRun(

@@ -798,6 +798,7 @@
               <div class="field">
                 <label for="backtestDataSource">Data Source</label>
                 <select id="backtestDataSource">
+                  <option>Alpaca Historical Data</option>
                   <option>Polygon / Massive</option>
                   <option>Local Historical Cache</option>
                 </select>
@@ -879,6 +880,27 @@
                 <div class="mini-card">
                   <div class="report-section-title">Universe Traded</div>
                   <div id="backtestUniverseSymbols" class="chip-wrap"></div>
+                </div>
+                <div class="mini-card">
+                  <div class="report-section-title">Qualified Universe Ranking</div>
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Symbol</th>
+                          <th>Price</th>
+                          <th>Avg Vol</th>
+                          <th>Float M</th>
+                          <th>Mkt Cap M</th>
+                        </tr>
+                      </thead>
+                      <tbody id="backtestUniverseRankedTable"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="mini-card">
+                  <div class="report-section-title">Backtest Notes</div>
+                  <div id="backtestNotes" class="stack muted">No notes yet.</div>
                 </div>
                 <div class="mini-card">
                   <div class="report-section-title">Top Tested Variants</div>
@@ -1417,6 +1439,8 @@
       const cards = document.getElementById("backtestSummaryCards");
       const suggestion = document.getElementById("backtestSuggestion");
       const symbols = document.getElementById("backtestUniverseSymbols");
+      const rankedUniverse = document.getElementById("backtestUniverseRankedTable");
+      const notes = document.getElementById("backtestNotes");
       const variantTable = document.getElementById("backtestVariantTable");
       const rawOutput = document.getElementById("backtestSummaryOutput");
 
@@ -1424,6 +1448,8 @@
         cards.innerHTML = "";
         suggestion.textContent = "No backtest run results yet.";
         symbols.innerHTML = '<span class="muted">No symbols yet.</span>';
+        rankedUniverse.innerHTML = '<tr><td colspan="5" class="muted">No ranked universe yet.</td></tr>';
+        notes.innerHTML = '<div class="muted">No notes yet.</div>';
         variantTable.innerHTML = '<tr><td colspan="8" class="muted">No variants tested yet.</td></tr>';
         rawOutput.textContent = "No run results yet.";
         return;
@@ -1439,7 +1465,8 @@
         buildReportStat("Trades Taken", formatCount(best.total_trades), `${formatCount(summary.variants_tested || 0)} variant(s) tested`),
         buildReportStat("Win Rate", formatPercent(best.win_rate), `${summary.account_type || "-"}`),
         buildReportStat("Max Drawdown", formatPercent(best.max_drawdown), `${summary.replay_speed || "-"} replay`),
-        buildReportStat("Profit Factor", Number.isFinite(Number(best.profit_factor)) ? String(best.profit_factor) : "-", `${summary.data_source || "-"}`)
+        buildReportStat("Profit Factor", Number.isFinite(Number(best.profit_factor)) ? String(best.profit_factor) : "-", `${summary.data_source || "-"}`),
+        buildReportStat("Assets Checked", formatCount(summary.assets_considered), `${formatCount(summary.universe_size)} qualified symbol(s)`)
       ].join("");
 
       suggestion.textContent = summary.suggestion || "No optimization suggestion available yet.";
@@ -1448,6 +1475,24 @@
       symbols.innerHTML = universeSymbols.length
         ? universeSymbols.map((symbol) => `<span class="pill">${symbol}</span>`).join("")
         : '<span class="muted">No symbols matched this run.</span>';
+
+      const rankedRows = summary.universe_ranked || [];
+      rankedUniverse.innerHTML = rankedRows.length
+        ? rankedRows.map((item) => `
+            <tr>
+              <td>${item.symbol || "-"}</td>
+              <td>${item.price ?? "-"}</td>
+              <td>${item.avg_volume ? formatCount(item.avg_volume) : "-"}</td>
+              <td>${item.float_millions ?? "-"}</td>
+              <td>${item.market_cap_millions ?? "-"}</td>
+            </tr>
+          `).join("")
+        : '<tr><td colspan="5" class="muted">No ranked universe data for this run.</td></tr>';
+
+      const noteRows = summary.notes || [];
+      notes.innerHTML = noteRows.length
+        ? noteRows.map((item) => `<div>${item}</div>`).join("")
+        : '<div class="muted">No special notes for this run.</div>';
 
       variantTable.innerHTML = variantRows.length
         ? variantRows.map((variant) => `
@@ -1821,7 +1866,7 @@
       if (!backtestFormDirty) {
         const prefs = loadStore(STORAGE_KEYS.backtest, {
           strategy: "VWAP Strategy",
-          dataSource: "Polygon / Massive",
+          dataSource: "Alpaca Historical Data",
           mode: "Simple Replay",
           anchorDaysOld: 4,
           simulationDays: 30,
