@@ -244,6 +244,64 @@
       gap: 12px;
     }
 
+    .strategy-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .strategy-tab {
+      min-width: 180px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #2a2a2a, #232323);
+      cursor: pointer;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .strategy-tab.active {
+      border-color: rgba(183, 255, 60, 0.45);
+      background: linear-gradient(180deg, rgba(183, 255, 60, 0.14), rgba(183, 255, 60, 0.05));
+      box-shadow: inset 0 0 0 1px rgba(183, 255, 60, 0.08);
+    }
+
+    .strategy-tab-name {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .strategy-tab-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .strategy-workspace {
+      display: grid;
+      gap: 14px;
+    }
+
+    .strategy-hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #303030, #272727);
+    }
+
+    .strategy-hero-metrics {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .mini-card {
       background: linear-gradient(180deg, #2d2d2d, #262626);
       border: 1px solid var(--border);
@@ -1417,14 +1475,15 @@
       scanner: "tradingPlatform.scanner",
       risk: "tradingPlatform.risk",
       backtest: "tradingPlatform.backtest",
-      dismissedUpdateCommit: "tradingPlatform.dismissedUpdateCommit"
+      dismissedUpdateCommit: "tradingPlatform.dismissedUpdateCommit",
+      selectedStrategyId: "tradingPlatform.selectedStrategyId"
     };
 
     const VIEW_META = {
       dashboard: ["Results", "What the bot is doing and how recent tests performed"],
       "market-scanner": ["Market Scanner", "Advanced tradable-universe tools"],
       watchlists: ["Watchlists", "Maintain a local manual symbol list"],
-      strategies: ["Strategy Setup", "Choose strategies and tune how the bot makes decisions"],
+      strategies: ["Trading Strategy Setup", "Choose strategies and tune how the bot makes decisions"],
       backtesting: ["Run & Backtest", "Choose your data window, account type, and replay setup"],
       "paper-trading": ["Paper Trading", "Simulation environment and paper execution snapshot"],
       "live-trading": ["Live Trading", "Broker readiness and live route status"],
@@ -1510,6 +1569,19 @@
           <div class="report-stat-subvalue">${subvalue}</div>
         </div>
       `;
+    }
+
+    function getSelectedStrategyId(strategies) {
+      const savedId = loadStore(STORAGE_KEYS.selectedStrategyId, null);
+      if (savedId && strategies.some((strategy) => strategy.strategy_id === savedId)) {
+        return savedId;
+      }
+      return strategies[0] ? strategies[0].strategy_id : null;
+    }
+
+    function setSelectedStrategyId(strategyId) {
+      saveStore(STORAGE_KEYS.selectedStrategyId, strategyId);
+      renderStrategies(lastData);
     }
 
     function dismissCurrentUpdate() {
@@ -1981,54 +2053,88 @@
         profileButtons.appendChild(btn);
       });
 
-      strategies.forEach((strategy, index) => {
-        const config = strategy.configuration;
-        const guidedMode = (workspace.experience_mode || "guided") === "guided";
-        const parameterRows = (strategy.parameter_schema || []).map((parameter) => `
-          <div class="field" style="margin-top:10px;">
-            <label>${parameter.label}</label>
-            ${buildParameterInput(strategy.strategy_id, parameter, config.parameters_json[parameter.key], guidedMode && parameter.group !== "risk")}
-            <div class="muted">${parameter.description || ""}</div>
-          </div>
-        `).join("");
-        const card = document.createElement("div");
-        card.className = "mini-card";
-        card.innerHTML = `
-          <div class="mini-title">${config.display_name}</div>
-          <div class="muted">${strategy.description}</div>
-          <div class="toggle-row">
-            <span>Enabled</span>
-            <input id="enabled-${strategy.strategy_id}" type="checkbox" ${config.enabled ? "checked" : ""} />
-          </div>
-          <div class="field" style="margin-top:10px;">
-            <label>Timeframe</label>
-            <select id="timeframe-${strategy.strategy_id}">
-              <option value="1m" ${config.timeframe === "1m" ? "selected" : ""}>1m</option>
-              <option value="5m" ${config.timeframe === "5m" ? "selected" : ""}>5m</option>
-              <option value="15m" ${config.timeframe === "15m" ? "selected" : ""}>15m</option>
-            </select>
-          </div>
-          <div class="field" style="margin-top:10px;">
-            <label>Capital Allocation %</label>
-            <input id="allocation-${strategy.strategy_id}" type="number" min="0" max="100" value="${config.capital_allocation_pct}" />
-          </div>
-          <div class="field" style="margin-top:10px;">
-            <label>Risk Tolerance</label>
-            <input id="risk-${strategy.strategy_id}" type="range" min="0" max="100" value="${config.risk_tolerance}" />
-            <div class="row"><span class="pill" id="risk-value-${strategy.strategy_id}">${config.risk_tolerance}</span><span class="muted">${classifyRiskProfile(config.risk_tolerance)}</span></div>
-          </div>
-          ${parameterRows}
-          <div class="row" style="margin-top:12px;">
-            <button class="button" onclick="saveStrategyConfig('${strategy.strategy_id}')">Save Strategy</button>
-            <span class="muted">Mode: ${config.experience_mode}</span>
-          </div>
+      if (!strategies.length) {
+        container.innerHTML = `<div class="mini-card muted">No strategies available yet.</div>`;
+        return;
+      }
+
+      const selectedStrategyId = getSelectedStrategyId(strategies);
+      const selectedStrategy = strategies.find((strategy) => strategy.strategy_id === selectedStrategyId) || strategies[0];
+      const config = selectedStrategy.configuration;
+      const guidedMode = (workspace.experience_mode || "guided") === "guided";
+      const parameterRows = (selectedStrategy.parameter_schema || []).map((parameter) => `
+        <div class="field" style="margin-top:10px;">
+          <label>${parameter.label}</label>
+          ${buildParameterInput(selectedStrategy.strategy_id, parameter, config.parameters_json[parameter.key], guidedMode && parameter.group !== "risk")}
+          <div class="muted">${parameter.description || ""}</div>
+        </div>
+      `).join("");
+
+      const tabs = strategies.map((strategy) => {
+        const isActive = strategy.strategy_id === selectedStrategy.strategy_id;
+        return `
+          <button class="strategy-tab ${isActive ? "active" : ""}" onclick="setSelectedStrategyId('${strategy.strategy_id}')">
+            <div class="strategy-tab-name">${strategy.configuration.display_name}</div>
+            <div class="strategy-tab-meta">${strategy.configuration.enabled ? "Enabled" : "Disabled"} | ${strategy.configuration.timeframe}</div>
+          </button>
         `;
-        container.appendChild(card);
-        const riskSlider = card.querySelector(`#risk-${strategy.strategy_id}`);
-        const riskValue = card.querySelector(`#risk-value-${strategy.strategy_id}`);
-        riskSlider.addEventListener("input", () => {
-          riskValue.textContent = riskSlider.value;
-        });
+      }).join("");
+
+      container.innerHTML = `
+        <div class="strategy-tabs">
+          ${tabs}
+        </div>
+        <div class="strategy-workspace">
+          <div class="strategy-hero">
+            <div>
+              <div class="mini-title">${config.display_name}</div>
+              <div class="muted">${selectedStrategy.description}</div>
+            </div>
+            <div class="strategy-hero-metrics">
+              <span class="pill">${config.enabled ? "Enabled" : "Disabled"}</span>
+              <span class="pill">${config.timeframe}</span>
+              <span class="pill">${classifyRiskProfile(config.risk_tolerance)}</span>
+            </div>
+          </div>
+          <div class="mini-card">
+            <div class="toggle-row">
+              <span>Enabled</span>
+              <input id="enabled-${selectedStrategy.strategy_id}" type="checkbox" ${config.enabled ? "checked" : ""} />
+            </div>
+            <div class="form-grid" style="margin-top:10px;">
+              <div class="field">
+                <label>Timeframe</label>
+                <select id="timeframe-${selectedStrategy.strategy_id}">
+                  <option value="1m" ${config.timeframe === "1m" ? "selected" : ""}>1m</option>
+                  <option value="5m" ${config.timeframe === "5m" ? "selected" : ""}>5m</option>
+                  <option value="15m" ${config.timeframe === "15m" ? "selected" : ""}>15m</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Capital Allocation %</label>
+                <input id="allocation-${selectedStrategy.strategy_id}" type="number" min="0" max="100" value="${config.capital_allocation_pct}" />
+              </div>
+              <div class="field">
+                <label>Risk Tolerance</label>
+                <input id="risk-${selectedStrategy.strategy_id}" type="range" min="0" max="100" value="${config.risk_tolerance}" />
+                <div class="row"><span class="pill" id="risk-value-${selectedStrategy.strategy_id}">${config.risk_tolerance}</span><span class="muted">${classifyRiskProfile(config.risk_tolerance)}</span></div>
+              </div>
+            </div>
+            <div class="form-grid">
+              ${parameterRows}
+            </div>
+            <div class="row" style="margin-top:12px;">
+              <button class="button" onclick="saveStrategyConfig('${selectedStrategy.strategy_id}')">Save Strategy</button>
+              <span class="muted">Mode: ${config.experience_mode}</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const riskSlider = container.querySelector(`#risk-${selectedStrategy.strategy_id}`);
+      const riskValue = container.querySelector(`#risk-value-${selectedStrategy.strategy_id}`);
+      riskSlider.addEventListener("input", () => {
+        riskValue.textContent = riskSlider.value;
       });
     }
 
@@ -2859,6 +2965,7 @@
     window.engineAction = engineAction;
     window.removeWatchlistSymbol = removeWatchlistSymbol;
     window.saveStrategyConfig = saveStrategyConfig;
+    window.setSelectedStrategyId = setSelectedStrategyId;
   </script>
 </body>
 </html>
